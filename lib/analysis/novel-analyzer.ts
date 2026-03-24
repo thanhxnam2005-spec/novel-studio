@@ -14,7 +14,7 @@ import {
   buildCharacterPrompt,
   buildIntermediateAggregationPrompt,
 } from "./prompts";
-import type { AnalysisProgress, ChapterAnalysisResult } from "./types";
+import type { AnalysisError, AnalysisProgress, ChapterAnalysisResult } from "./types";
 import {
   type AnalysisDepth,
   getBudget,
@@ -105,7 +105,7 @@ export async function analyzeNovel({
     .sortBy("order");
 
   if (allChapters.length === 0) {
-    throw new Error("No chapters found for this novel");
+    throw new Error("Không tìm thấy chương nào cho tiểu thuyết này");
   }
 
   // Sample chapters for quick mode
@@ -144,43 +144,46 @@ export async function analyzeNovel({
     });
   }
 
-  try {
-    // ── Phase 1: Chapter Analysis (with batching + truncation) ──
+  const errors: AnalysisError[] = [];
 
-    const chapterContents: BatchItem[] = [];
-    for (const { item: chapter, originalIndex } of sampled) {
-      const scenes = await db.scenes
-        .where("chapterId")
-        .equals(chapter.id)
-        .sortBy("order");
-      const content = scenes.map((s) => s.content).join("\n\n");
-      chapterContents.push({
-        chapterIndex: originalIndex,
-        title: chapter.title,
-        content,
-        tokens: estimateTokens(content),
-      });
-    }
+  // ── Phase 1: Chapter Analysis (with batching + truncation) ──
 
-    const batches = batchChapters(chapterContents, budget.batchTargetTokens);
+  const chapterContents: BatchItem[] = [];
+  for (const { item: chapter, originalIndex } of sampled) {
+    const scenes = await db.scenes
+      .where("chapterId")
+      .equals(chapter.id)
+      .sortBy("order");
+    const content = scenes.map((s) => s.content).join("\n\n");
+    chapterContents.push({
+      chapterIndex: originalIndex,
+      title: chapter.title,
+      content,
+      tokens: estimateTokens(content),
+    });
+  }
 
-    let chaptersCompleted = 0;
-    const chapterResults: {
-      chapterId: string;
-      title: string;
-      result: ChapterAnalysisResult;
-    }[] = [];
+  const batches = batchChapters(chapterContents, budget.batchTargetTokens);
 
-    const batchTasks = batches.map((batch) => async () => {
-      signal?.throwIfAborted();
+  let chaptersCompleted = 0;
+  const chapterResults: {
+    chapterId: string;
+    title: string;
+    result: ChapterAnalysisResult;
+  }[] = [];
 
+  const batchTasks = batches.map((batch) => async () => {
+    // Abort errors always propagate immediately
+    signal?.throwIfAborted();
+
+    try {
       let results: ChapterAnalysisResult[];
 
       if (batch.length === 1) {
         const item = batch[0];
         if (!item.content.trim()) {
           results = [
-            { summary: "Empty chapter", keyScenes: [], characters: [] },
+            { summary: "Chương trống", keyScenes: [], characters: [] },
           ];
         } else {
           const result = await analyzeChapter(
@@ -197,7 +200,7 @@ export async function analyzeNovel({
         const nonEmpty = batch.filter((b) => b.content.trim());
         if (nonEmpty.length === 0) {
           results = batch.map(() => ({
-            summary: "Empty chapter",
+            summary: "Chương trống",
             keyScenes: [],
             characters: [],
           }));
@@ -213,7 +216,7 @@ export async function analyzeNovel({
           results = batch.map((b) => {
             if (!b.content.trim()) {
               return {
-                summary: "Empty chapter",
+                summary: "Chương trống",
                 keyScenes: [],
                 characters: [],
               };
@@ -242,218 +245,273 @@ export async function analyzeNovel({
         });
 
         chaptersCompleted++;
-        await db.novelAnalyses.update(analysisId, {
-          chaptersAnalyzed: chaptersCompleted,
-          updatedAt: new Date(),
-        });
         onProgress?.({
           phase: "chapters",
           chaptersCompleted,
           totalChapters,
         });
-      }
-    });
-
-    await runWithConcurrency(batchTasks, CONCURRENCY_LIMIT);
-
-    // ── Phase 2: Novel Aggregation (with recursive summarization) ──
-    signal?.throwIfAborted();
-    onProgress?.({
-      phase: "aggregation",
-      chaptersCompleted: totalChapters,
-      totalChapters,
-    });
-
-    const summaries = chapterResults.map((cr) => ({
-      title: cr.title,
-      summary: cr.result.summary,
-    }));
-
-    const groups = groupSummariesForAggregation(
-      summaries,
-      budget.maxAggregationTokens,
-    );
-
-    let finalSummaries = summaries;
-
-    if (groups.length > 1) {
-      const intermediateTasks = groups.map((group, gi) => async () => {
-        signal?.throwIfAborted();
-        const result = await generateStructured({
-          model: aggregationModel,
-          schema: intermediateSummarySchema,
-          system: prompts.intermediateAggregation,
-          prompt: buildIntermediateAggregationPrompt(group),
-          abortSignal: signal,
-        });
-        return {
-          title: `Group ${gi + 1} (chapters ${group[0].title} – ${group[group.length - 1].title})`,
-          summary: result.object.summary,
-        };
-      });
-
-      finalSummaries = await runWithConcurrency(
-        intermediateTasks,
-        CONCURRENCY_LIMIT,
-      );
-    }
-
-    const aggregation = await generateStructured({
-      model: aggregationModel,
-      schema: novelAggregationSchema,
-      system: prompts.novelAggregation,
-      prompt: buildAggregationPrompt(finalSummaries),
-      abortSignal: signal,
-    });
-
-    await db.novelAnalyses.update(analysisId, {
-      genres: aggregation.object.genres,
-      tags: aggregation.object.tags,
-      synopsis: aggregation.object.synopsis,
-      worldOverview: aggregation.object.worldOverview,
-      powerSystem: aggregation.object.powerSystem ?? undefined,
-      storySetting: aggregation.object.storySetting,
-      timePeriod: aggregation.object.timePeriod ?? undefined,
-      factions: aggregation.object.factions,
-      keyLocations: aggregation.object.keyLocations,
-      worldRules: aggregation.object.worldRules ?? undefined,
-      technologyLevel: aggregation.object.technologyLevel ?? undefined,
-      updatedAt: new Date(),
-    });
-
-    // ── Phase 3: Character Profiling (with capping) ──────────
-    signal?.throwIfAborted();
-    onProgress?.({
-      phase: "characters",
-      chaptersCompleted: totalChapters,
-      totalChapters,
-    });
-
-    const rawCharacterMap = new Map<string, string[]>();
-    for (const cr of chapterResults) {
-      for (const char of cr.result.characters) {
-        const key = char.name.toLowerCase().trim();
-        const existing = rawCharacterMap.get(key) ?? [];
-        existing.push(
-          `[${cr.title}] (${char.role}) ${char.noteInChapter}`,
-        );
-        rawCharacterMap.set(key, existing);
-      }
-    }
-
-    const characterMap = capCharacterMentions(
-      rawCharacterMap,
-      budget.maxMentionsPerCharacter,
-      budget.maxCharactersToProfile,
-    );
-
-    if (characterMap.size > 0) {
-      const nameKeyMap = new Map<string, string>();
-      for (const cr of chapterResults) {
-        for (const char of cr.result.characters) {
-          const key = char.name.toLowerCase().trim();
-          if (!nameKeyMap.has(key) && characterMap.has(key)) {
-            nameKeyMap.set(key, char.name);
-          }
-        }
-      }
-
-      const characterNotes: { name: string; mentions: string[] }[] = [];
-      for (const [key, mentions] of characterMap.entries()) {
-        characterNotes.push({
-          name: nameKeyMap.get(key) ?? key,
-          mentions,
-        });
-      }
-
-      const profiling = await generateStructured({
-        model: characterModel,
-        schema: characterProfilingSchema,
-        system: prompts.characterProfiling,
-        prompt: buildCharacterPrompt(characterNotes),
-        abortSignal: signal,
-      });
-
-      const now = new Date();
-      for (const profile of profiling.object.characters) {
-        const existing = await db.characters
-          .where("novelId")
-          .equals(novelId)
-          .filter(
-            (c) =>
-              c.name.toLowerCase().trim() ===
-              profile.name.toLowerCase().trim(),
-          )
-          .first();
-
-        const charData = {
-          role: profile.role,
-          description: profile.description,
-          age: profile.age,
-          sex: profile.sex,
-          appearance: profile.appearance,
-          personality: profile.personality,
-          hobbies: profile.hobbies,
-          relationshipWithMC: profile.relationshipWithMC,
-          relationships: profile.relationships,
-          characterArc: profile.characterArc,
-          strengths: profile.strengths,
-          weaknesses: profile.weaknesses,
-          motivations: profile.motivations,
-          goals: profile.goals,
-        };
-
-        if (existing) {
-          await db.characters.update(existing.id, {
-            ...charData,
-            updatedAt: now,
-          });
-        } else {
-          await db.characters.add({
-            id: crypto.randomUUID(),
-            novelId,
-            name: profile.name,
-            ...charData,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-      }
-
-      for (const cr of chapterResults) {
-        const charNames = cr.result.characters.map((c) =>
-          c.name.toLowerCase().trim(),
-        );
-        const charRecords = await db.characters
-          .where("novelId")
-          .equals(novelId)
-          .filter((c) => charNames.includes(c.name.toLowerCase().trim()))
-          .toArray();
-        await db.chapters.update(cr.chapterId, {
-          characterIds: charRecords.map((c) => c.id),
+        await db.novelAnalyses.update(analysisId, {
+          chaptersAnalyzed: chaptersCompleted,
           updatedAt: new Date(),
         });
       }
-    }
+    } catch (err) {
+      // Re-throw abort errors so the entire analysis stops
+      if (err instanceof Error && err.name === "AbortError") throw err;
 
-    // ── Mark Complete ───────────────────────────────────────
-    await db.novelAnalyses.update(analysisId, {
-      analysisStatus: "completed",
-      updatedAt: new Date(),
-    });
-    onProgress?.({
-      phase: "complete",
-      chaptersCompleted: totalChapters,
-      totalChapters,
-    });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    await db.novelAnalyses.update(analysisId, {
-      analysisStatus: "failed",
-      error: errorMessage,
-      updatedAt: new Date(),
-    });
-    throw error;
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      const titles = batch.map((b) => b.title);
+      for (const title of titles) {
+        const error: AnalysisError = {
+          phase: "chapters",
+          chapterTitle: title,
+          message: msg,
+        };
+        errors.push(error);
+        onProgress?.({
+          phase: "chapters",
+          chaptersCompleted,
+          totalChapters,
+          error,
+        });
+      }
+      // Count them as "processed" so progress moves forward
+      chaptersCompleted += batch.length;
+      onProgress?.({
+        phase: "chapters",
+        chaptersCompleted,
+        totalChapters,
+      });
+    }
+  });
+
+  await runWithConcurrency(batchTasks, CONCURRENCY_LIMIT);
+
+  // ── Phase 2: Novel Aggregation (with recursive summarization) ──
+  if (chapterResults.length > 0) {
+    try {
+      signal?.throwIfAborted();
+      onProgress?.({
+        phase: "aggregation",
+        chaptersCompleted: totalChapters,
+        totalChapters,
+      });
+
+      const summaries = chapterResults.map((cr) => ({
+        title: cr.title,
+        summary: cr.result.summary,
+      }));
+
+      const groups = groupSummariesForAggregation(
+        summaries,
+        budget.maxAggregationTokens,
+      );
+
+      let finalSummaries = summaries;
+
+      if (groups.length > 1) {
+        const intermediateTasks = groups.map((group, gi) => async () => {
+          signal?.throwIfAborted();
+          const result = await generateStructured({
+            model: aggregationModel,
+            schema: intermediateSummarySchema,
+            system: prompts.intermediateAggregation,
+            prompt: buildIntermediateAggregationPrompt(group),
+            abortSignal: signal,
+          });
+          return {
+            title: `Group ${gi + 1} (chapters ${group[0].title} – ${group[group.length - 1].title})`,
+            summary: result.object.summary,
+          };
+        });
+
+        finalSummaries = await runWithConcurrency(
+          intermediateTasks,
+          CONCURRENCY_LIMIT,
+        );
+      }
+
+      const aggregation = await generateStructured({
+        model: aggregationModel,
+        schema: novelAggregationSchema,
+        system: prompts.novelAggregation,
+        prompt: buildAggregationPrompt(finalSummaries),
+        abortSignal: signal,
+      });
+
+      await db.novelAnalyses.update(analysisId, {
+        genres: aggregation.object.genres,
+        tags: aggregation.object.tags,
+        synopsis: aggregation.object.synopsis,
+        worldOverview: aggregation.object.worldOverview,
+        powerSystem: aggregation.object.powerSystem ?? undefined,
+        storySetting: aggregation.object.storySetting,
+        timePeriod: aggregation.object.timePeriod ?? undefined,
+        factions: aggregation.object.factions,
+        keyLocations: aggregation.object.keyLocations,
+        worldRules: aggregation.object.worldRules ?? undefined,
+        technologyLevel: aggregation.object.technologyLevel ?? undefined,
+        updatedAt: new Date(),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      const error: AnalysisError = {
+        phase: "aggregation",
+        message: err instanceof Error ? err.message : "Unknown error",
+      };
+      errors.push(error);
+      onProgress?.({
+        phase: "aggregation",
+        chaptersCompleted: totalChapters,
+        totalChapters,
+        error,
+      });
+    }
   }
+
+  // ── Phase 3: Character Profiling (with capping) ──────────
+  if (chapterResults.length > 0) {
+    try {
+      signal?.throwIfAborted();
+      onProgress?.({
+        phase: "characters",
+        chaptersCompleted: totalChapters,
+        totalChapters,
+      });
+
+      const rawCharacterMap = new Map<string, string[]>();
+      for (const cr of chapterResults) {
+        for (const char of cr.result.characters) {
+          const key = char.name.toLowerCase().trim();
+          const existing = rawCharacterMap.get(key) ?? [];
+          existing.push(
+            `[${cr.title}] (${char.role}) ${char.noteInChapter}`,
+          );
+          rawCharacterMap.set(key, existing);
+        }
+      }
+
+      const characterMap = capCharacterMentions(
+        rawCharacterMap,
+        budget.maxMentionsPerCharacter,
+        budget.maxCharactersToProfile,
+      );
+
+      if (characterMap.size > 0) {
+        const nameKeyMap = new Map<string, string>();
+        for (const cr of chapterResults) {
+          for (const char of cr.result.characters) {
+            const key = char.name.toLowerCase().trim();
+            if (!nameKeyMap.has(key) && characterMap.has(key)) {
+              nameKeyMap.set(key, char.name);
+            }
+          }
+        }
+
+        const characterNotes: { name: string; mentions: string[] }[] = [];
+        for (const [key, mentions] of characterMap.entries()) {
+          characterNotes.push({
+            name: nameKeyMap.get(key) ?? key,
+            mentions,
+          });
+        }
+
+        const profiling = await generateStructured({
+          model: characterModel,
+          schema: characterProfilingSchema,
+          system: prompts.characterProfiling,
+          prompt: buildCharacterPrompt(characterNotes),
+          abortSignal: signal,
+        });
+
+        const now = new Date();
+        for (const profile of profiling.object.characters) {
+          const existing = await db.characters
+            .where("novelId")
+            .equals(novelId)
+            .filter(
+              (c) =>
+                c.name.toLowerCase().trim() ===
+                profile.name.toLowerCase().trim(),
+            )
+            .first();
+
+          const charData = {
+            role: profile.role,
+            description: profile.description,
+            age: profile.age,
+            sex: profile.sex,
+            appearance: profile.appearance,
+            personality: profile.personality,
+            hobbies: profile.hobbies,
+            relationshipWithMC: profile.relationshipWithMC,
+            relationships: profile.relationships,
+            characterArc: profile.characterArc,
+            strengths: profile.strengths,
+            weaknesses: profile.weaknesses,
+            motivations: profile.motivations,
+            goals: profile.goals,
+          };
+
+          if (existing) {
+            await db.characters.update(existing.id, {
+              ...charData,
+              updatedAt: now,
+            });
+          } else {
+            await db.characters.add({
+              id: crypto.randomUUID(),
+              novelId,
+              name: profile.name,
+              ...charData,
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        }
+
+        for (const cr of chapterResults) {
+          const charNames = cr.result.characters.map((c) =>
+            c.name.toLowerCase().trim(),
+          );
+          const charRecords = await db.characters
+            .where("novelId")
+            .equals(novelId)
+            .filter((c) => charNames.includes(c.name.toLowerCase().trim()))
+            .toArray();
+          await db.chapters.update(cr.chapterId, {
+            characterIds: charRecords.map((c) => c.id),
+            updatedAt: new Date(),
+          });
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      const error: AnalysisError = {
+        phase: "characters",
+        message: err instanceof Error ? err.message : "Unknown error",
+      };
+      errors.push(error);
+      onProgress?.({
+        phase: "characters",
+        chaptersCompleted: totalChapters,
+        totalChapters,
+        error,
+      });
+    }
+  }
+
+  // ── Mark Complete ───────────────────────────────────────
+  await db.novelAnalyses.update(analysisId, {
+    analysisStatus: errors.length > 0 ? "completed" : "completed",
+    error: errors.length > 0
+      ? errors.map((e) => e.chapterTitle ? `[${e.chapterTitle}] ${e.message}` : `[${e.phase}] ${e.message}`).join("; ")
+      : undefined,
+    updatedAt: new Date(),
+  });
+  onProgress?.({
+    phase: "complete",
+    chaptersCompleted: totalChapters,
+    totalChapters,
+  });
 }

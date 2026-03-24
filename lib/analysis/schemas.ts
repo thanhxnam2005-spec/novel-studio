@@ -12,44 +12,44 @@ export const chapterAnalysisSchema = jsonSchema<ChapterAnalysisResult>({
   properties: {
     summary: {
       type: "string",
-      description: "A concise summary of the chapter (2-4 sentences)",
+      description: "Tóm tắt ngắn gọn của chương (2-4 câu)",
     },
     keyScenes: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Short scene title" },
+          title: { type: "string", description: "Tiêu đề ngắn của cảnh" },
           description: {
             type: "string",
-            description: "Brief description of the scene",
+            description: "Mô tả ngắn về cảnh",
           },
         },
         required: ["title", "description"],
         additionalProperties: false,
       },
-      description: "Key scenes or events in this chapter",
+      description: "Các cảnh hoặc sự kiện chính trong chương",
     },
     characters: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Character name" },
+          name: { type: "string", description: "Tên nhân vật" },
           role: {
             type: "string",
             description:
-              "Role in this chapter: protagonist, antagonist, supporting, or mentioned",
+              "Vai trò trong chương: nhân vật chính, phản diện, hỗ trợ, hoặc được đề cập",
           },
           noteInChapter: {
             type: "string",
-            description: "What the character did or how they appeared",
+            description: "Nhân vật đã làm gì hoặc xuất hiện như thế nào",
           },
         },
         required: ["name", "role", "noteInChapter"],
         additionalProperties: false,
       },
-      description: "Characters that appear or are mentioned",
+      description: "Các nhân vật xuất hiện hoặc được đề cập",
     },
   },
   required: ["summary", "keyScenes", "characters"],
@@ -67,7 +67,7 @@ export const batchChapterAnalysisSchema =
           properties: {
             summary: {
               type: "string",
-              description: "A concise summary of the chapter (2-4 sentences)",
+              description: "Tóm tắt ngắn gọn của chương (2-4 câu)",
             },
             keyScenes: {
               type: "array",
@@ -111,7 +111,7 @@ export const intermediateSummarySchema =
       summary: {
         type: "string",
         description:
-          "A cohesive summary of this group of chapters preserving key plot, characters, and world-building",
+          "Bản tóm tắt mạch lạc của nhóm chương, giữ lại cốt truyện, nhân vật và xây dựng thế giới quan",
       },
     },
     required: ["summary"],
@@ -124,35 +124,35 @@ export const novelAggregationSchema = jsonSchema<NovelAggregationResult>({
     genres: {
       type: "array",
       items: { type: "string" },
-      description: "Literary genres (e.g. Fantasy, Romance, Sci-Fi)",
+      description: "Thể loại văn học (VD: Huyền huyễn, Ngôn tình, Khoa học viễn tưởng)",
     },
     tags: {
       type: "array",
       items: { type: "string" },
       description:
-        "Descriptive tags (e.g. slow-burn, isekai, cultivation, time-travel)",
+        "Nhãn mô tả (VD: slow-burn, isekai, tu tiên, xuyên không)",
     },
     synopsis: {
       type: "string",
       description:
-        "A compelling synopsis of the entire novel (3-6 sentences)",
+        "Tóm tắt hấp dẫn về toàn bộ tiểu thuyết (3-6 câu)",
     },
     worldOverview: {
       type: "string",
-      description: "Overview of the world and setting",
+      description: "Tổng quan về thế giới và bối cảnh",
     },
     powerSystem: {
       anyOf: [{ type: "string" }, { type: "null" }],
       description:
-        "Description of the power/magic system, or null if not applicable",
+        "Mô tả hệ thống sức mạnh/phép thuật, hoặc null nếu không áp dụng",
     },
     storySetting: {
       type: "string",
-      description: "Physical and social setting of the story",
+      description: "Bối cảnh vật lý và xã hội của câu chuyện",
     },
     timePeriod: {
       anyOf: [{ type: "string" }, { type: "null" }],
-      description: "Time period or era of the story, or null if unclear",
+      description: "Thời kỳ hoặc niên đại của câu chuyện, hoặc null nếu không rõ",
     },
     factions: {
       type: "array",
@@ -165,7 +165,7 @@ export const novelAggregationSchema = jsonSchema<NovelAggregationResult>({
         required: ["name", "description"],
         additionalProperties: false,
       },
-      description: "Major factions, organizations, or groups",
+      description: "Các phe phái, tổ chức hoặc nhóm lớn",
     },
     keyLocations: {
       type: "array",
@@ -178,17 +178,17 @@ export const novelAggregationSchema = jsonSchema<NovelAggregationResult>({
         required: ["name", "description"],
         additionalProperties: false,
       },
-      description: "Important locations in the story",
+      description: "Các địa điểm quan trọng trong truyện",
     },
     worldRules: {
       anyOf: [{ type: "string" }, { type: "null" }],
       description:
-        "Key rules or laws of the world, or null if not applicable",
+        "Các quy luật hoặc luật lệ chính của thế giới, hoặc null nếu không áp dụng",
     },
     technologyLevel: {
       anyOf: [{ type: "string" }, { type: "null" }],
       description:
-        "Technology level of the world, or null if not applicable",
+        "Trình độ công nghệ của thế giới, hoặc null nếu không áp dụng",
     },
   },
   required: [
@@ -215,36 +215,36 @@ export const characterProfilingSchema = jsonSchema<CharacterProfilingResult>({
       items: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Full name" },
+          name: { type: "string", description: "Họ tên đầy đủ" },
           age: {
             type: "string",
-            description: "Age or age range, or 'Unknown' if not stated",
+            description: "Tuổi hoặc khoảng tuổi, hoặc 'Không rõ' nếu không được nêu",
           },
           sex: {
             type: "string",
-            description: "Male, Female, or Other/Unknown",
+            description: "Nam, Nữ, hoặc Khác/Không rõ",
           },
           role: {
             type: "string",
             description:
-              "Story role: MC (main character), love interest, antagonist, supporting, minor",
+              "Vai trò trong truyện: Nhân vật chính, người yêu, phản diện, hỗ trợ, phụ",
           },
           appearance: {
             type: "string",
-            description: "Physical appearance description",
+            description: "Mô tả ngoại hình",
           },
           personality: {
             type: "string",
-            description: "Personality traits and temperament",
+            description: "Đặc điểm tính cách và khí chất",
           },
           hobbies: {
             type: "string",
-            description: "Hobbies, interests, and habits",
+            description: "Sở thích, mối quan tâm và thói quen",
           },
           relationshipWithMC: {
             type: "string",
             description:
-              "Relationship to the main character, or 'N/A - this is the MC' for the protagonist",
+              "Mối quan hệ với nhân vật chính, hoặc 'N/A - đây là nhân vật chính' nếu là chính chủ",
           },
           relationships: {
             type: "array",
@@ -254,35 +254,35 @@ export const characterProfilingSchema = jsonSchema<CharacterProfilingResult>({
                 characterName: { type: "string" },
                 description: {
                   type: "string",
-                  description: "Nature of the relationship",
+                  description: "Bản chất mối quan hệ",
                 },
               },
               required: ["characterName", "description"],
               additionalProperties: false,
             },
-            description: "Relationships with other characters",
+            description: "Mối quan hệ với các nhân vật khác",
           },
           characterArc: {
             type: "string",
             description:
-              "Character development and arc throughout the story",
+              "Sự phát triển và hành trình nhân vật xuyên suốt truyện",
           },
-          strengths: { type: "string", description: "Key strengths" },
+          strengths: { type: "string", description: "Điểm mạnh chính" },
           weaknesses: {
             type: "string",
-            description: "Key weaknesses or flaws",
+            description: "Điểm yếu hoặc khuyết điểm chính",
           },
           motivations: {
             type: "string",
-            description: "Core motivations and desires",
+            description: "Động lực và mong muốn cốt lõi",
           },
           goals: {
             type: "string",
-            description: "Goals and objectives in the story",
+            description: "Mục tiêu và mục đích trong truyện",
           },
           description: {
             type: "string",
-            description: "Overall character summary (2-3 sentences)",
+            description: "Tổng quan nhân vật (2-3 câu)",
           },
         },
         required: [

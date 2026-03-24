@@ -1,33 +1,33 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { ZapIcon, GaugeIcon, TelescopeIcon } from "lucide-react";
+import { AnalysisModelPicker } from "@/components/analysis-model-picker";
+import { AnalysisProgress } from "@/components/analysis-progress";
+import { AnalysisPromptEditor } from "@/components/analysis-prompt-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import {
-  useChatSettings,
-  useAIProvider,
-  useAnalysisSettings,
-} from "@/lib/hooks";
 import { getModel } from "@/lib/ai/provider";
 import {
   analyzeNovel,
   analyzeNovelIncremental,
   type AnalysisDepth,
 } from "@/lib/analysis";
-import { useAnalysisStore } from "@/lib/stores/analysis";
-import { AnalysisProgress } from "@/components/analysis-progress";
-import { AnalysisPromptEditor } from "@/components/analysis-prompt-editor";
-import { AnalysisModelPicker } from "@/components/analysis-model-picker";
 import { db } from "@/lib/db";
+import {
+  useAIProvider,
+  useAnalysisSettings,
+  useChatSettings,
+} from "@/lib/hooks";
+import { useAnalysisStore } from "@/lib/stores/analysis";
+import { GaugeIcon, TelescopeIcon, ZapIcon } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 type AnalysisMode = "full" | "incremental" | "selected";
 
@@ -59,8 +59,19 @@ export function AnalysisDialog({
   const chatSettings = useChatSettings();
   const provider = useAIProvider(chatSettings?.providerId);
   const analysisSettings = useAnalysisSettings();
-  const { isAnalyzing, start, updateProgress, setPhase, setError, reset } =
-    useAnalysisStore();
+  const {
+    isAnalyzing,
+    phase,
+    errors,
+    start,
+    updateProgress,
+    setPhase,
+    addError,
+    setError,
+    reset,
+  } = useAnalysisStore();
+  const isDone =
+    phase === "complete" || phase === "completed_with_errors" || phase === "error";
 
   const [depth, setDepth] = useState<AnalysisDepth>("standard");
 
@@ -89,7 +100,7 @@ export function AnalysisDialog({
 
     const count =
       mode === "selected"
-        ? selectedChapterIds?.length ?? 0
+        ? (selectedChapterIds?.length ?? 0)
         : mode === "incremental"
           ? totalChapters
           : totalChapters;
@@ -112,9 +123,15 @@ export function AnalysisDialog({
         characters: await resolveStep(analysisSettings.characterModel),
       },
       globalSystemInstruction: chatSettings.globalSystemInstruction,
-      onProgress: (progress: { chaptersCompleted: number; phase: string }) => {
-        updateProgress(progress.chaptersCompleted);
+      onProgress: (progress: {
+        chaptersCompleted: number;
+        totalChapters: number;
+        phase: string;
+        error?: { phase: string; chapterTitle?: string; message: string };
+      }) => {
+        updateProgress(progress.chaptersCompleted, progress.totalChapters);
         setPhase(progress.phase as never);
+        if (progress.error) addError(progress.error);
       },
     };
 
@@ -122,11 +139,18 @@ export function AnalysisDialog({
       if (mode === "full") {
         await analyzeNovel(commonOpts);
       } else {
-        // incremental and selected both use the incremental analyzer
         await analyzeNovelIncremental(commonOpts);
       }
-      toast.success("Phân tích hoàn tất!");
-      reset();
+      const storeErrors = useAnalysisStore.getState().errors;
+      if (storeErrors.length > 0) {
+        setPhase("completed_with_errors" as never);
+        toast.warning(
+          `Hoàn tất với ${storeErrors.length} lỗi. Bạn có thể chạy lại để thử các chương thất bại.`,
+        );
+      } else {
+        toast.success("Phân tích hoàn tất!");
+        reset();
+      }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         toast.info("Đã hủy phân tích.");
@@ -149,14 +173,21 @@ export function AnalysisDialog({
     start,
     updateProgress,
     setPhase,
+    addError,
     setError,
     reset,
     resolveStep,
   ]);
 
   return (
-    <Dialog open={open} onOpenChange={isAnalyzing ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog
+      open={open}
+      onOpenChange={isAnalyzing && !isDone ? undefined : (v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{modeLabel}</DialogTitle>
           <DialogDescription>
@@ -169,14 +200,13 @@ export function AnalysisDialog({
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-4 pr-4">
-            {/* Progress (when running) */}
-            {isAnalyzing && <AnalysisProgress />}
+          <div className="space-y-4 p-1 pr-4">
+            {/* Progress (when running or done with errors) */}
+            {(isAnalyzing || isDone) && <AnalysisProgress />}
 
-            {/* Config (when not running) */}
-            {!isAnalyzing && (
+            {/* Config (when not running and not done) */}
+            {!isAnalyzing && !isDone && (
               <>
-                {/* Depth */}
                 <div>
                   <p className="mb-2 text-xs font-medium">Độ sâu</p>
                   <div className="flex gap-2">
@@ -213,13 +243,53 @@ export function AnalysisDialog({
           </div>
         </ScrollArea>
 
-        {!isAnalyzing && (
+        {/* Initial state: start button */}
+        {!isAnalyzing && !isDone && (
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Hủy
             </Button>
             <Button onClick={handleRun} disabled={!provider}>
               Bắt đầu phân tích
+            </Button>
+          </div>
+        )}
+
+        {/* Done with errors: retry + close */}
+        {isDone && errors.length > 0 && (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                reset();
+                onOpenChange(false);
+              }}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                reset();
+                // Small delay so store resets before handleRun reads it
+                setTimeout(handleRun, 0);
+              }}
+              disabled={!provider}
+            >
+              Chạy lại phần thất bại
+            </Button>
+          </div>
+        )}
+
+        {/* Done cleanly: auto-closed, but just in case show close */}
+        {isDone && errors.length === 0 && (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              onClick={() => {
+                reset();
+                onOpenChange(false);
+              }}
+            >
+              Đóng
             </Button>
           </div>
         )}

@@ -21,26 +21,28 @@ export default function ChapterEditorPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [initialized, setInitialized] = useState(false);
+  const [titleInit, setTitleInit] = useState(false);
+  const [contentInit, setContentInit] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Initialize from DB
+  // Initialize from DB — track separately since chapter and scene load independently
   useEffect(() => {
-    if (chapter && !initialized) {
+    if (chapter && !titleInit) {
       setTitle(chapter.title);
-      setInitialized(true);
+      setTitleInit(true);
     }
-  }, [chapter, initialized]);
+  }, [chapter, titleInit]);
 
   useEffect(() => {
-    if (scene && !initialized) {
+    if (scene && !contentInit) {
       setContent(scene.content);
+      setContentInit(true);
     }
-  }, [scene, initialized]);
+  }, [scene, contentInit]);
 
   const isDirty =
-    initialized &&
-    (title !== chapter?.title || content !== scene?.content);
+    (titleInit && title !== chapter?.title) ||
+    (contentInit && content !== scene?.content);
 
   const wordCount = content
     .trim()

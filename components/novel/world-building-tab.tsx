@@ -1,23 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  GlobeIcon,
-  SwordsIcon,
-  MapPinIcon,
-  ShieldIcon,
-  CpuIcon,
-  ScrollTextIcon,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import type { NameDescription, NovelAnalysis } from "@/lib/db";
+import { updateNovelAnalysis } from "@/lib/hooks";
+import {
+  CpuIcon,
+  GlobeIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  ScrollTextIcon,
+  ShieldIcon,
+  SwordsIcon,
+  TrashIcon,
+} from "lucide-react";
+import { useState } from "react";
 import { EditableText } from "./editable-text";
 import { FactionEditDialog } from "./faction-edit-dialog";
-import type { NovelAnalysis, NameDescription } from "@/lib/db";
-import { updateNovelAnalysis } from "@/lib/hooks";
 
 function ItemList({
   items,
@@ -43,11 +43,7 @@ function ItemList({
             <Icon className="size-3.5" />
             {label}
           </p>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => setAddOpen(true)}
-          >
+          <Button variant="outline" size="xs" onClick={() => setAddOpen(true)}>
             <PlusIcon className="size-3" />
             Thêm
           </Button>
@@ -146,7 +142,9 @@ export function WorldBuildingTab({
           {label}
         </p>
         <EditableText
-          value={(analysis?.[field] as string) ?? ""}
+          value={
+            (typeof analysis?.[field] === "string" ? analysis[field] : "") ?? ""
+          }
           onSave={(v) => save(field, v || undefined)}
           placeholder={`Chưa có ${label.toLowerCase()}...`}
           multiline={multi}

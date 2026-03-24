@@ -4,50 +4,50 @@ import { z } from "zod";
 // ─── Aggregation Tools ──────────────────────────────────────
 
 export const updateSynopsisTool = tool({
-  description: "Update the novel synopsis to incorporate new chapter content",
+  description: "Cập nhật tóm tắt tiểu thuyết dựa trên nội dung chương mới",
   inputSchema: z.object({
-    synopsis: z.string().describe("The updated synopsis (3-6 sentences)"),
+    synopsis: z.string().describe("Tóm tắt đã cập nhật (3-6 câu)"),
   }),
 });
 
 export const updateGenresTagsTool = tool({
-  description: "Update genres and/or tags based on new content",
+  description: "Cập nhật thể loại và/hoặc nhãn dựa trên nội dung mới",
   inputSchema: z.object({
-    genres: z.array(z.string()).describe("Complete updated list of genres"),
-    tags: z.array(z.string()).describe("Complete updated list of tags"),
+    genres: z.array(z.string()).describe("Danh sách thể loại đã cập nhật đầy đủ"),
+    tags: z.array(z.string()).describe("Danh sách nhãn đã cập nhật đầy đủ"),
   }),
 });
 
 export const updateWorldBuildingTool = tool({
-  description: "Update world-building fields. Only include fields that changed.",
+  description: "Cập nhật các trường xây dựng thế giới. Chỉ bao gồm các trường đã thay đổi.",
   inputSchema: z.object({
-    worldOverview: z.string().optional().describe("Updated world overview"),
+    worldOverview: z.string().optional().describe("Tổng quan thế giới đã cập nhật"),
     powerSystem: z
       .string()
       .nullable()
       .optional()
-      .describe("Updated power system description, or null if N/A"),
-    storySetting: z.string().optional().describe("Updated story setting"),
+      .describe("Mô tả hệ thống sức mạnh đã cập nhật, hoặc null nếu không áp dụng"),
+    storySetting: z.string().optional().describe("Bối cảnh truyện đã cập nhật"),
     timePeriod: z
       .string()
       .nullable()
       .optional()
-      .describe("Updated time period"),
+      .describe("Thời kỳ đã cập nhật"),
     worldRules: z
       .string()
       .nullable()
       .optional()
-      .describe("Updated world rules"),
+      .describe("Quy luật thế giới đã cập nhật"),
     technologyLevel: z
       .string()
       .nullable()
       .optional()
-      .describe("Updated technology level"),
+      .describe("Trình độ công nghệ đã cập nhật"),
   }),
 });
 
 export const addFactionTool = tool({
-  description: "Add a new faction or organization discovered in new chapters",
+  description: "Thêm phe phái hoặc tổ chức mới phát hiện trong các chương mới",
   inputSchema: z.object({
     name: z.string(),
     description: z.string(),
@@ -55,15 +55,15 @@ export const addFactionTool = tool({
 });
 
 export const updateFactionTool = tool({
-  description: "Update an existing faction's description",
+  description: "Cập nhật mô tả của phe phái đã có",
   inputSchema: z.object({
-    name: z.string().describe("Exact name of the existing faction"),
-    description: z.string().describe("Updated description"),
+    name: z.string().describe("Tên chính xác của phe phái đã có"),
+    description: z.string().describe("Mô tả đã cập nhật"),
   }),
 });
 
 export const addLocationTool = tool({
-  description: "Add a new key location discovered in new chapters",
+  description: "Thêm địa điểm quan trọng mới phát hiện trong các chương mới",
   inputSchema: z.object({
     name: z.string(),
     description: z.string(),
@@ -71,10 +71,10 @@ export const addLocationTool = tool({
 });
 
 export const updateLocationTool = tool({
-  description: "Update an existing location's description",
+  description: "Cập nhật mô tả của địa điểm đã có",
   inputSchema: z.object({
-    name: z.string().describe("Exact name of the existing location"),
-    description: z.string().describe("Updated description"),
+    name: z.string().describe("Tên chính xác của địa điểm đã có"),
+    description: z.string().describe("Mô tả đã cập nhật"),
   }),
 });
 
@@ -92,15 +92,15 @@ export const aggregationTools = {
 
 const characterRelationshipSchema = z.object({
   characterName: z.string(),
-  description: z.string().describe("Nature of the relationship"),
+  description: z.string().describe("Bản chất mối quan hệ"),
 });
 
 export const addCharacterTool = tool({
-  description: "Add a brand new character discovered in new chapters",
+  description: "Thêm nhân vật mới phát hiện trong các chương mới",
   inputSchema: z.object({
     name: z.string(),
-    role: z.string().describe("MC, love interest, antagonist, supporting, minor"),
-    description: z.string().describe("Overall character summary"),
+    role: z.string().describe("Nhân vật chính, người yêu, phản diện, hỗ trợ, phụ"),
+    description: z.string().describe("Tổng quan nhân vật"),
     age: z.string().optional(),
     sex: z.string().optional(),
     appearance: z.string().optional(),
@@ -118,9 +118,9 @@ export const addCharacterTool = tool({
 
 export const updateCharacterTool = tool({
   description:
-    "Update fields on an existing character. Only include fields that changed.",
+    "Cập nhật các trường của nhân vật đã có. Chỉ bao gồm các trường đã thay đổi.",
   inputSchema: z.object({
-    name: z.string().describe("Exact name of the existing character"),
+    name: z.string().describe("Tên chính xác của nhân vật đã có"),
     role: z.string().optional(),
     description: z.string().optional(),
     age: z.string().optional(),
@@ -138,11 +138,11 @@ export const updateCharacterTool = tool({
 });
 
 export const addRelationshipTool = tool({
-  description: "Add a relationship to an existing character",
+  description: "Thêm mối quan hệ cho nhân vật đã có",
   inputSchema: z.object({
-    characterName: z.string().describe("Name of the character to update"),
-    relatedTo: z.string().describe("Name of the related character"),
-    description: z.string().describe("Nature of the relationship"),
+    characterName: z.string().describe("Tên nhân vật cần cập nhật"),
+    relatedTo: z.string().describe("Tên nhân vật liên quan"),
+    description: z.string().describe("Bản chất mối quan hệ"),
   }),
 });
 

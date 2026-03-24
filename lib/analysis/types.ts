@@ -80,7 +80,7 @@ export interface CharacterProfilingResult {
   characters: CharacterProfileResult[];
 }
 
-// ─── Progress ───────────────────────────────────────────────
+// ─── Progress & Errors ──────────────────────────────────────
 
 export type AnalysisPhase =
   | "chapters"
@@ -88,8 +88,15 @@ export type AnalysisPhase =
   | "characters"
   | "complete";
 
+export interface AnalysisError {
+  phase: string;
+  chapterTitle?: string;
+  message: string;
+}
+
 export interface AnalysisProgress {
   phase: AnalysisPhase;
   chaptersCompleted: number;
   totalChapters: number;
+  error?: AnalysisError;
 }

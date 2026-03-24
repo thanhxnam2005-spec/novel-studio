@@ -1,6 +1,7 @@
 "use client";
 
 import { AddChapterDialog } from "@/components/add-chapter-dialog";
+import { BulkAddChaptersDialog } from "@/components/bulk-add-chapters-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
   ChevronRightIcon,
   CircleDashedIcon,
   ClockIcon,
+  FileTextIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
@@ -74,6 +76,7 @@ export function ChaptersTab({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const getStatus = (chapterId: string): ChapterAnalysisStatus =>
     analysisStatuses?.find((s) => s.chapterId === chapterId)?.status ??
@@ -117,6 +120,10 @@ export function ChaptersTab({
         <Button size="sm" onClick={() => setAddOpen(true)}>
           <PlusIcon className="mr-1.5 size-3.5" />
           Thêm chương
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
+          <FileTextIcon className="mr-1.5 size-3.5" />
+          Thêm nhiều
         </Button>
         <div className="ml-auto flex gap-2">
           {selected.size > 0 && (
@@ -251,6 +258,13 @@ export function ChaptersTab({
       <AddChapterDialog
         open={addOpen}
         onOpenChange={setAddOpen}
+        novelId={novelId}
+        nextOrder={chapters.length}
+      />
+
+      <BulkAddChaptersDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
         novelId={novelId}
         nextOrder={chapters.length}
       />

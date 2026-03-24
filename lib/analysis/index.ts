@@ -25,4 +25,5 @@ export type {
   CharacterProfilingResult,
   AnalysisPhase,
   AnalysisProgress,
+  AnalysisError,
 } from "./types";
