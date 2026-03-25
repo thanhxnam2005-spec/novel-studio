@@ -62,7 +62,7 @@ export function ReviewMode({
       errorPrefix: "Đánh giá thất bại",
       onComplete: (result) => setReviewResult(result, chapterId),
     });
-  }, [content, novelId, settings, provider, chatSettings, setReviewResult]);
+  }, [content, novelId, chapterId, settings, provider, chatSettings, setReviewResult]);
 
   const handleRegenerate = () => {
     clearResult();

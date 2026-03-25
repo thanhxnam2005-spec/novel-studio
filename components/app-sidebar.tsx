@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpenIcon,
+  DatabaseIcon,
   HomeIcon,
   LibraryIcon,
   PenLineIcon,
@@ -35,6 +36,11 @@ export const navConfig = [
     title: "Chỉ thị chung",
     href: "/settings/instructions",
     icon: ScrollTextIcon,
+  },
+  {
+    title: "Quản lý dữ liệu",
+    href: "/settings/data",
+    icon: DatabaseIcon,
   },
 ] as const;
 
