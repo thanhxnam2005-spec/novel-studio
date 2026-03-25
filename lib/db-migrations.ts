@@ -69,4 +69,9 @@ export function registerMigrations(db: NovelStudioDB) {
         });
       }
     });
+
+  // v11: Index updatedAt on chapters for recent chapters dashboard query
+  db.version(11).stores({
+    chapters: "id, novelId, order, createdAt, updatedAt",
+  });
 }

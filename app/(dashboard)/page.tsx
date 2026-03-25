@@ -1,6 +1,5 @@
 "use client";
 
-import { CreateNovelDialog } from "@/components/create-novel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,133 +16,263 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { useNovels } from "@/lib/hooks";
-import { BookOpenIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { navConfig } from "@/components/app-sidebar";
+import {
+  useDashboardStats,
+  useRecentChapters,
+  useTopNovelsByChapters,
+} from "@/lib/hooks";
+import {
+  BookOpenIcon,
+  FileTextIcon,
+  PenLineIcon,
+  TrophyIcon,
+  UsersIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+
+function formatNumber(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
+function formatRelative(date: Date) {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "Vừa xong";
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return date.toLocaleDateString("vi-VN", { day: "numeric", month: "short" });
+}
+
+const QUICK_NAV_HREFS = ["/library", "/import", "/settings/providers"];
+const QUICK_NAV = navConfig.filter((item) =>
+  QUICK_NAV_HREFS.includes(item.href),
+);
 
 export default function DashboardPage() {
-  const novels = useNovels();
-  const [createOpen, setCreateOpen] = useState(false);
+  const stats = useDashboardStats();
+  const recentChapters = useRecentChapters(8);
+  const topNovels = useTopNovelsByChapters(5);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-8">
-      <div className="mb-8">
+    <main className="mx-auto w-full max-w-5xl px-6 py-8">
+      {/* Header */}
+      <div className="mb-6">
         <h1 className="font-heading text-3xl font-bold tracking-tight">
           Chào mừng trở lại
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Tiếp tục nơi bạn đã dừng lại, hoặc bắt đầu một câu chuyện mới.
+          Tổng quan không gian sáng tác của bạn.
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card
-          className="cursor-pointer border-dashed transition-colors hover:border-foreground/20 hover:bg-muted/50"
-          onClick={() => setCreateOpen(true)}
-        >
-          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10">
-              <PlusIcon className="size-5 text-primary" />
-            </div>
-            <p className="text-sm font-medium">Tiểu thuyết mới</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Bắt đầu một câu chuyện mới
-            </p>
-          </CardContent>
-        </Card>
-
-        <Link href="/import" className="sm:col-span-1 lg:col-span-2">
-          <Card className="h-full cursor-pointer border-dashed transition-colors hover:border-foreground/20 hover:bg-muted/50">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <UploadIcon className="size-5 text-primary" />
-              </div>
-              <p className="text-sm font-medium">Nhập tiểu thuyết</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Tải lên hoặc dán văn bản có sẵn
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {novels === undefined ? (
-          Array.from({ length: 2 }).map((_, i) => (
+      {/* Stats */}
+      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats === undefined ? (
+          Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 w-2/3 rounded bg-muted" />
-                <div className="h-3 w-1/2 rounded bg-muted" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 w-full rounded bg-muted" />
+              <CardContent className="py-4">
+                <div className="h-3 w-16 rounded bg-muted" />
+                <div className="mt-2 h-7 w-12 rounded bg-muted" />
               </CardContent>
             </Card>
           ))
-        ) : novels.length === 0 ? (
-          <Card className="sm:col-span-2 lg:col-span-3">
-            <CardContent className="py-6">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <BookOpenIcon />
-                  </EmptyMedia>
-                  <EmptyTitle>Thư viện trống</EmptyTitle>
-                  <EmptyDescription>
-                    Tạo tiểu thuyết đầu tiên hoặc nhập từ nguồn có sẵn.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </CardContent>
-          </Card>
         ) : (
-          novels.slice(0, 5).map((novel) => (
-            <Link key={novel.id} href={`/novels/${novel.id}`}>
-              <Card className="relative h-full overflow-hidden transition-colors hover:bg-muted/30">
-                {novel.color && (
-                  <div
-                    className="absolute top-0 left-0 right-0 h-1.5"
-                    style={{ backgroundColor: novel.color }}
-                  />
-                )}
-                <CardHeader>
-                  <CardTitle>{novel.title}</CardTitle>
-                  {novel.author && (
-                    <CardDescription>{novel.author}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {novel.genres && novel.genres.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1">
-                      {novel.genres.slice(0, 3).map((g) => (
-                        <Badge
-                          key={g}
-                          variant="secondary"
-                          className="text-[11px]"
-                        >
-                          {g}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <p className="line-clamp-2 text-sm text-muted-foreground">
-                    {novel.description || "Chưa có mô tả."}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))
+          <>
+            <StatCard
+              label="Tiểu thuyết"
+              value={stats.novelCount}
+              icon={BookOpenIcon}
+            />
+            <StatCard
+              label="Chương"
+              value={stats.chapterCount}
+              icon={FileTextIcon}
+            />
+            <StatCard
+              label="Tổng từ"
+              value={stats.wordCount}
+              icon={PenLineIcon}
+            />
+            <StatCard
+              label="Nhân vật"
+              value={stats.characterCount}
+              icon={UsersIcon}
+            />
+          </>
         )}
       </div>
 
-      {novels && novels.length > 0 && (
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline" asChild>
-            <a href="/library">Xem tất cả tiểu thuyết</a>
-          </Button>
-        </div>
-      )}
+      {/* Main content: 2/3 + 1/3 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Recent chapters — left 2/3 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Chương gần đây</CardTitle>
+            <CardDescription>
+              Các chương được chỉnh sửa gần nhất
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentChapters === undefined ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : recentChapters.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>Chưa có chương nào</EmptyTitle>
+                  <EmptyDescription>
+                    Tạo tiểu thuyết và thêm chương để bắt đầu.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="space-y-1">
+                {recentChapters.map((ch) => (
+                  <Link
+                    key={ch.id}
+                    href={`/novels/${ch.novelId}/chapters/${ch.id}`}
+                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/50"
+                  >
+                    {ch.novelColor && (
+                      <div
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: ch.novelColor }}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {ch.title}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {ch.novelTitle}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {ch.wordCount.toLocaleString()} từ
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground/60">
+                      {formatRelative(ch.updatedAt)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <CreateNovelDialog open={createOpen} onOpenChange={setCreateOpen} />
+        {/* Right column */}
+        <div className="flex flex-col gap-6">
+          {/* Top novels */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrophyIcon className="size-4 text-amber-500" />
+                Top tiểu thuyết
+              </CardTitle>
+              <CardDescription>Theo số chương</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {topNovels === undefined ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" />
+                  ))}
+                </div>
+              ) : topNovels.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  Chưa có dữ liệu
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {topNovels.map((item, i) => (
+                    <Link
+                      key={item.novel.id}
+                      href={`/novels/${item.novel.id}`}
+                      className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50"
+                    >
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold">
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {item.novel.title}
+                      </span>
+                      <Badge variant="secondary" className="text-[11px]">
+                        {item.chapterCount} ch.
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick nav */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Truy cập nhanh</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-1">
+                {QUICK_NAV.map((item) => (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start"
+                    asChild
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="size-4" />
+                      {item.title}
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 py-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="size-4 text-primary" />
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-xl font-semibold tabular-nums">
+            {formatNumber(value)}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,5 @@
 export * from "./use-novels";
+export * from "./use-dashboard-stats";
 export * from "./use-chapters";
 export * from "./use-scenes";
 export * from "./use-characters";

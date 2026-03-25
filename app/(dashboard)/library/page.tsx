@@ -1,5 +1,6 @@
 "use client";
 
+import { CreateNovelDialog } from "@/components/create-novel-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +65,6 @@ import {
   UploadIcon,
   XIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -123,7 +123,7 @@ export default function LibraryPage() {
   const [view, setView] = useState<ViewMode>("grid");
   const [page, setPage] = useState(1);
 
-  // Delete state
+  const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Novel | null>(null);
 
   const genres = useMemo(() => {
@@ -275,13 +275,11 @@ export default function LibraryPage() {
             onClick={() => importInputRef.current?.click()}
           >
             <UploadIcon className="size-4" />
-            Nhập JSON
+            Nhập sách
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/">
-              <PlusIcon className="size-4" />
-              Tạo mới
-            </Link>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <PlusIcon className="size-4" />
+            Tạo mới
           </Button>
         </div>
       </div>
@@ -576,6 +574,8 @@ export default function LibraryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateNovelDialog open={createOpen} onOpenChange={setCreateOpen} />
     </main>
   );
 }
