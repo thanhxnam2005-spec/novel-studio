@@ -315,12 +315,15 @@ export async function analyzeNovelIncremental({
           `Bạn là nhà phân tích văn học đang cập nhật phân tích tiểu thuyết hiện có dựa trên nội dung chương mới.
 
 Quy tắc:
-- Bạn có các công cụ để cập nhật từng phần cụ thể. Chỉ gọi công cụ cho phần THỰC SỰ cần thay đổi.
-- Nếu chương mới không ảnh hưởng đến một trường, KHÔNG gọi công cụ cho trường đó.
+- Bạn có các công cụ để cập nhật từng phần cụ thể.
+- Nếu một trường đang trống và chương mới có thông tin liên quan, hãy GỌI công cụ để điền dữ liệu.
+- Nếu một trường đã có dữ liệu và chương mới bổ sung hoặc thay đổi thông tin, hãy GỌI công cụ để cập nhật.
+- Nếu chương mới không ảnh hưởng đến một trường ĐÃ CÓ dữ liệu, KHÔNG gọi công cụ cho trường đó.
 - Khi cập nhật synopsis, viết lại hoàn chỉnh (không chỉ thêm vào cuối), giữ hấp dẫn và không spoil.
 - Khi cập nhật genres/tags, giữ lại các mục cũ vẫn đúng, thêm mới nếu cần, bỏ mục không còn phù hợp.
 - Khi thêm/cập nhật phe phái hoặc địa điểm, kiểm tra xem đã tồn tại chưa trước khi thêm mới.
 - Bạn có thể gọi nhiều công cụ cùng lúc.
+- QUAN TRỌNG: Hãy đảm bảo gọi update_world_building nếu các trường thế giới quan đang trống.
 
 Trả lời bằng Tiếng Việt.`,
         ),
@@ -331,10 +334,13 @@ ${JSON.stringify(
     tags: currentNovel?.tags ?? [],
     synopsis: currentNovel?.synopsis ?? "",
     worldOverview: currentNovel?.worldOverview ?? "",
-    powerSystem: currentNovel?.powerSystem,
+    powerSystem: currentNovel?.powerSystem ?? null,
     storySetting: currentNovel?.storySetting ?? "",
+    timePeriod: currentNovel?.timePeriod ?? null,
     factions: currentNovel?.factions ?? [],
     keyLocations: currentNovel?.keyLocations ?? [],
+    worldRules: currentNovel?.worldRules ?? null,
+    technologyLevel: currentNovel?.technologyLevel ?? null,
   },
   null,
   2,
@@ -343,9 +349,9 @@ ${JSON.stringify(
 ## Tóm tắt chương mới
 ${newSummariesText}
 
-Dựa trên các chương mới, hãy gọi các công cụ phù hợp để cập nhật phân tích.`,
+Dựa trên các chương mới, hãy gọi các công cụ phù hợp để cập nhật phân tích. Lưu ý: nếu các trường đang trống/null và có thể điền dựa trên nội dung, hãy điền chúng.`,
         tools: aggregationTools,
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(10),
         abortSignal: signal,
       });
 

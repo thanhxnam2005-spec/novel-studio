@@ -65,6 +65,36 @@ export const CATEGORY_META: Record<
 
 export const changelog: ChangelogRelease[] = [
   {
+    version: "0.5.0",
+    date: "2026-03-26",
+    title: "Nhật ký thay đổi & Cải thiện phân tích",
+    summary:
+      "Thêm trang nhật ký thay đổi để theo dõi lịch sử phát triển ứng dụng. Sửa lỗi phân tích AI không trả về dữ liệu xây dựng thế giới.",
+    changes: [
+      {
+        category: "feature",
+        description: "Trang nhật ký thay đổi",
+        details:
+          "Xem lịch sử cập nhật của Novel Studio theo dòng thời gian. Mỗi phiên bản hiển thị tóm tắt, danh sách thay đổi theo loại (tính năng, sửa lỗi, cải thiện...) và các tag liên quan. Có thể lọc theo loại thay đổi.",
+        tags: ["trang mới", "lịch sử"],
+      },
+      {
+        category: "fix",
+        description: "Phân tích AI giờ trả về đầy đủ dữ liệu xây dựng thế giới",
+        details:
+          "Trước đây, sau khi phân tích xong, các mục thế giới quan, phe phái, và địa điểm có thể bị trống do dữ liệu AI trả về không được lưu đúng cách. Đã sửa để đảm bảo mọi trường luôn được ghi vào cơ sở dữ liệu.",
+        tags: ["phân tích", "xây dựng thế giới"],
+      },
+      {
+        category: "improvement",
+        description: "Phân tích gia tăng thông minh hơn",
+        details:
+          "Khi chạy phân tích cập nhật (không phải toàn bộ), AI giờ sẽ tự động điền các trường đang trống thay vì chỉ cập nhật trường đã thay đổi. Tăng giới hạn số lượng thao tác AI có thể thực hiện trong một lần phân tích.",
+        tags: ["phân tích", "AI"],
+      },
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-03-26",
     title: "Dịch thuật hàng loạt",
@@ -154,7 +184,7 @@ export const changelog: ChangelogRelease[] = [
   },
   {
     version: "0.2.0",
-    date: "2026-03-25",
+    date: "2026-03-24",
     title: "Nền tảng cốt lõi",
     summary:
       "Kết nối với nhiều dịch vụ AI khác nhau, trò chuyện với AI trong ngữ cảnh tiểu thuyết, và phân tích tự động toàn bộ tác phẩm.",
@@ -168,9 +198,9 @@ export const changelog: ChangelogRelease[] = [
       },
       {
         category: "feature",
-        description: "Trò chuyện với AI về tiểu thuyết của bạn",
+        description: "Trợ lý AI cạnh bên",
         details:
-          "Mở bảng chat bên phải màn hình để hỏi AI về cốt truyện, nhân vật, hoặc xin gợi ý sáng tác. AI hiểu ngữ cảnh tiểu thuyết bạn đang làm việc.",
+          "Nhấn vào biểu tượng AI trên thanh trên để mở sidebar trò chuyện, giúp hỏi đáp các vấn đề mở rộng không có giới hạn.",
         tags: ["chat", "sáng tác"],
       },
       {
@@ -200,7 +230,7 @@ export const changelog: ChangelogRelease[] = [
         category: "feature",
         description: "Ra mắt Novel Studio",
         details:
-          "Ứng dụng viết tiểu thuyết chạy trực tiếp trên trình duyệt. Mọi dữ liệu được lưu ngay trên máy của bạn — không gửi lên đâu cả, không cần đăng nhập, không cần internet (trừ khi dùng AI).",
+          "Ứng dụng viết tiểu thuyết chạy trực tiếp trên trình duyệt. Mọi dữ liệu được lưu ngay trên máy của bạn — không gửi lên đâu cả, không cần đăng nhập.",
         tags: ["ra mắt", "local-first"],
       },
     ],

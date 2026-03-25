@@ -317,18 +317,23 @@ export async function analyzeNovel({
         abortSignal: signal,
       });
 
+      // Use fallback values so that Dexie update() always writes every field.
+      // Without fallbacks, `undefined` values are silently skipped by Dexie,
+      // which happens when the AI returns partial JSON via content/fallback paths
+      // or when the AI returns `null` for nullable fields (null ?? undefined = undefined).
+      const agg = aggregation.object;
       await db.novels.update(novelId, {
-        genres: aggregation.object.genres,
-        tags: aggregation.object.tags,
-        synopsis: aggregation.object.synopsis,
-        worldOverview: aggregation.object.worldOverview,
-        powerSystem: aggregation.object.powerSystem ?? undefined,
-        storySetting: aggregation.object.storySetting,
-        timePeriod: aggregation.object.timePeriod ?? undefined,
-        factions: aggregation.object.factions,
-        keyLocations: aggregation.object.keyLocations,
-        worldRules: aggregation.object.worldRules ?? undefined,
-        technologyLevel: aggregation.object.technologyLevel ?? undefined,
+        genres: agg.genres ?? [],
+        tags: agg.tags ?? [],
+        synopsis: agg.synopsis ?? "",
+        worldOverview: agg.worldOverview ?? "",
+        powerSystem: agg.powerSystem ?? undefined,
+        storySetting: agg.storySetting ?? "",
+        timePeriod: agg.timePeriod ?? undefined,
+        factions: agg.factions ?? [],
+        keyLocations: agg.keyLocations ?? [],
+        worldRules: agg.worldRules ?? undefined,
+        technologyLevel: agg.technologyLevel ?? undefined,
         updatedAt: new Date(),
       });
     } catch (err) {
