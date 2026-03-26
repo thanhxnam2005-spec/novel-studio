@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { buildErrorTrace, storeErrorTrace } from "@/lib/ai/error-trace";
 import { getModel } from "@/lib/ai/provider";
 import { withGlobalInstruction } from "@/lib/ai/system-prompt";
 import {
@@ -40,7 +41,7 @@ import {
 } from "@/lib/hooks";
 import { useChatPanel } from "@/lib/stores/chat-panel";
 import { cn } from "@/lib/utils";
-import { streamText } from "ai";
+import { APICallError, streamText } from "ai";
 import {
   BotIcon,
   HistoryIcon,
@@ -203,6 +204,8 @@ export function ChatPanel() {
 
         let rawContent = "";
         let apiReasoning = "";
+        let finishReason: string | undefined;
+        let streamError: unknown = null;
 
         for await (const part of result.fullStream) {
           if (part.type === "reasoning-delta") {
@@ -210,6 +213,12 @@ export function ChatPanel() {
           }
           if (part.type === "text-delta") {
             rawContent += part.text;
+          }
+          if (part.type === "finish-step") {
+            finishReason = part.finishReason;
+          }
+          if (part.type === "error") {
+            streamError = part.error;
           }
 
           // Parse <think>/<thinking> tags from content stream
@@ -222,6 +231,12 @@ export function ChatPanel() {
           setStreamingContent(parsed.content);
         }
 
+        // If stream emitted an error part (network failures, API errors, etc.),
+        // throw so the catch block can format it properly
+        if (streamError) {
+          throw streamError;
+        }
+
         // Final parse
         const finalParsed = parseThinkingTags(rawContent);
         const finalReasoning = apiReasoning
@@ -229,10 +244,46 @@ export function ChatPanel() {
             (finalParsed.reasoning ? "\n\n" + finalParsed.reasoning : "")
           : finalParsed.reasoning;
 
-        // Empty response = content likely filtered/prohibited by provider
-        const finalContent = finalParsed.content.trim()
-          ? finalParsed.content
-          : "⚠️ Nhà cung cấp AI trả về nội dung trống — có thể nội dung đã bị chặn bởi bộ lọc an toàn. Hãy thử chỉnh sửa **Chỉ thị chung**, **system prompt** của cuộc hội thoại, hoặc **đổi mô hình AI** khác.";
+        // Empty response — provide specific message based on finish reason
+        let finalContent = finalParsed.content;
+        if (!finalContent.trim()) {
+          if (finishReason === "content-filter") {
+            finalContent =
+              "<!-- error -->\n**Nội dung bị chặn** — Bộ lọc an toàn của nhà cung cấp AI đã chặn phản hồi này. Hãy thử chỉnh sửa **Chỉ thị chung**, **system prompt** của cuộc hội thoại, hoặc **đổi mô hình AI** khác.";
+          } else if (finishReason === "length") {
+            finalContent =
+              "<!-- error -->\n**Vượt quá giới hạn token** — Phản hồi đã bị cắt do vượt quá giới hạn token của mô hình. Hãy thử rút ngắn lịch sử hội thoại hoặc sử dụng mô hình có context lớn hơn.";
+          } else if (finishReason === "error") {
+            finalContent =
+              "<!-- error -->\n**Lỗi nhà cung cấp** — Nhà cung cấp AI gặp lỗi nội bộ khi xử lý yêu cầu. Hãy thử lại sau hoặc đổi mô hình AI khác.";
+          } else {
+            finalContent =
+              "<!-- error -->\n**Phản hồi trống** — Nhà cung cấp AI trả về nội dung trống (finish reason: `" + (finishReason || "unknown") + "`). Hãy thử chỉnh sửa **Chỉ thị chung**, **system prompt** của cuộc hội thoại, hoặc **đổi mô hình AI** khác.";
+          }
+
+          // Store trace for empty/error responses too
+          if (assistantMsgId) {
+            const emptyErr = new Error(
+              `Empty response (finish reason: ${finishReason || "unknown"})`,
+            );
+            const trace = buildErrorTrace(emptyErr, {
+              module: "chat",
+              provider: {
+                name: selectedProvider.name,
+                type: selectedProvider.providerType ?? "openai-compatible",
+                baseUrl: selectedProvider.baseUrl,
+              },
+              modelId: selectedModelId,
+              request: {
+                systemPrompt,
+                messageCount: history.length,
+                temperature,
+                lastUserMessage: userText,
+              },
+            });
+            storeErrorTrace(assistantMsgId, trace);
+          }
+        }
 
         // Persist final content + reasoning
         await updateMessage(assistantMsgId, {
@@ -244,10 +295,95 @@ export function ChatPanel() {
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         if (assistantMsgId) {
-          const errorText =
-            err instanceof Error ? err.message : "Không nhận được phản hồi";
+          let errorContent: string;
+
+          if (APICallError.isInstance(err)) {
+            const status = err.statusCode;
+            const body = err.responseBody;
+
+            // Extract human-readable message from response body.
+            // Some providers nest JSON inside error.message (upstream proxies),
+            // so we recurse one level to find a plain-text message.
+            let detail = "";
+            let bodyJson = "";
+            if (body) {
+              try {
+                const parsed = JSON.parse(body);
+                bodyJson = JSON.stringify(parsed, null, 2);
+
+                const extractMessage = (obj: unknown): string => {
+                  if (!obj || typeof obj !== "object") return "";
+                  const o = obj as Record<string, unknown>;
+                  const msg =
+                    (typeof o?.error === "object"
+                      ? (o.error as Record<string, unknown>)?.message
+                      : undefined) ??
+                    o?.message ??
+                    (typeof o?.error === "string" ? o.error : "");
+                  if (typeof msg !== "string") return "";
+                  // If the message itself is JSON, try to extract from it
+                  const trimmed = msg.trim();
+                  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                    try {
+                      return extractMessage(JSON.parse(trimmed));
+                    } catch {
+                      /* not JSON, use as-is */
+                    }
+                  }
+                  return msg;
+                };
+
+                detail = extractMessage(parsed);
+              } catch {
+                detail = body.length > 200 ? body.slice(0, 200) + "..." : body;
+              }
+            }
+
+            const responseBlock = bodyJson
+              ? `\n\n\`\`\`json\n${bodyJson}\n\`\`\``
+              : "";
+
+            if (status === 401 || status === 403) {
+              errorContent = `<!-- error -->\n**Lỗi xác thực (${status})** — ${detail || "API key không hợp lệ hoặc không có quyền truy cập."}\n\nHãy kiểm tra lại API key trong **Cài đặt nhà cung cấp AI**.${responseBlock}`;
+            } else if (status === 429) {
+              errorContent = `<!-- error -->\n**Vượt quá giới hạn (429)** — ${detail || "Đã vượt quá rate limit hoặc hết quota."}\n\nHãy chờ một lát rồi thử lại, hoặc kiểm tra quota tài khoản.${responseBlock}`;
+            } else if (status === 404) {
+              errorContent = `<!-- error -->\n**Không tìm thấy (404)** — ${detail || "Mô hình hoặc endpoint không tồn tại."}\n\nHãy kiểm tra lại tên mô hình và URL của nhà cung cấp.${responseBlock}`;
+            } else if (status && status >= 500) {
+              errorContent = `<!-- error -->\n**Lỗi server (${status})** — ${detail || "Nhà cung cấp AI gặp sự cố nội bộ."}\n\nHãy thử lại sau.${responseBlock}`;
+            } else {
+              errorContent = `<!-- error -->\n**Lỗi API${status ? ` (${status})` : ""}** — ${detail || "Yêu cầu không hợp lệ."}${responseBlock}`;
+            }
+          } else {
+            const errorMsg =
+              err instanceof Error ? err.message : String(err);
+            const cause =
+              err instanceof Error && err.cause instanceof Error
+                ? err.cause.message
+                : "";
+            errorContent = `<!-- error -->\n**Lỗi kết nối** — ${errorMsg}${cause ? `\n\n> ${cause}` : ""}`;
+          }
+
+          // Build and store error trace for debug download
+          const trace = buildErrorTrace(err, {
+            module: "chat",
+            provider: {
+              name: selectedProvider.name,
+              type: selectedProvider.providerType ?? "openai-compatible",
+              baseUrl: selectedProvider.baseUrl,
+            },
+            modelId: selectedModelId,
+            request: {
+              systemPrompt,
+              messageCount: history.length,
+              temperature,
+              lastUserMessage: userText,
+            },
+          });
+          storeErrorTrace(assistantMsgId, trace);
+
           await updateMessage(assistantMsgId, {
-            content: streamingContent || `Error: ${errorText}`,
+            content: streamingContent || errorContent,
           });
         }
       } finally {

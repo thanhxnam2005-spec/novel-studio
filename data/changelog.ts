@@ -65,6 +65,30 @@ export const CATEGORY_META: Record<
 
 export const changelog: ChangelogRelease[] = [
   {
+    version: "0.7.0",
+    date: "2026-03-26",
+    title: "Cải thiện xử lý lỗi AI & Trải nghiệm chat",
+    summary:
+      "Hiển thị lỗi AI chi tiết và rõ ràng hơn, hỗ trợ tải trace log để debug, và nút sao chép nội dung tin nhắn.",
+    changes: [
+      {
+        category: "feature",
+        description:
+          "Nút sao chép nội dung tin nhắn, tải trace log khi AI gặp lỗi",
+        details:
+          "Di chuột vào bất kỳ tin nhắn nào trong chat để hiện nút sao chép nội dung dạng văn bản thuần. Khi AI trả về lỗi, bạn có thể tải xuống file JSON chứa toàn bộ thông tin debug",
+        tags: ["chat", "tiện ích", "debug"],
+      },
+      {
+        category: "improvement",
+        description: "Hiển thị lỗi AI chi tiết theo mã trạng thái",
+        details:
+          "Phân biệt rõ các loại lỗi, dễ dàng nhận biết và sửa lỗi. Tin nhắn lỗi hiển thị với giao diện khác biệt.",
+        tags: ["chat", "trải nghiệm"],
+      },
+    ],
+  },
+  {
     version: "0.6.0",
     date: "2026-03-26",
     title: "Lịch sử phiên bản & Soạn thảo nâng cao",

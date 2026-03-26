@@ -1,9 +1,14 @@
 import { Button } from "@/components/ui/button";
+import { downloadErrorTrace, getErrorTrace } from "@/lib/ai/error-trace";
 import { cn } from "@/lib/utils";
 import {
+  AlertTriangleIcon,
+  BugIcon,
   CheckIcon,
   ChevronDown,
   ChevronUp,
+  CopyIcon,
+  DownloadIcon,
   LoaderIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -15,25 +20,29 @@ import "streamdown/styles.css";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { chatStreamdownComponents } from "./streamdown-components";
 
+const ERROR_MARKER = "<!-- error -->";
+
 export function MessageBubble({
   message,
   isStreaming = false,
   onEdit,
   onRerun,
 }: {
-  message: { role: string; content: string; reasoning?: string };
+  message: { id: string; role: string; content: string; reasoning?: string };
   isStreaming?: boolean;
   onEdit?: (newContent: string) => void;
   onRerun?: () => void;
 }) {
   const isUser = message.role === "user";
+  const isError = !isUser && message.content.startsWith(ERROR_MARKER);
+  const displayContent = isError
+    ? message.content.slice(ERROR_MARKER.length).trimStart()
+    : message.content;
   const [reasoningOpenManual, setReasoningOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
-  const {
-    scrollRef: reasoningScrollRef,
-    contentRef: reasoningContentRef,
-  } = useStickToBottom();
+  const { scrollRef: reasoningScrollRef, contentRef: reasoningContentRef } =
+    useStickToBottom();
   const hasReasoning = !!message.reasoning;
   // Auto-open while streaming thinking, otherwise respect manual toggle
   const reasoningOpen =
@@ -63,6 +72,23 @@ export function MessageBubble({
     }
     if (e.key === "Escape") {
       cancelEdit();
+    }
+  }
+
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    const plain = isError ? displayContent : message.content;
+    navigator.clipboard.writeText(plain).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function handleDownloadTrace() {
+    const trace = getErrorTrace(message.id);
+    if (trace) {
+      downloadErrorTrace(trace);
     }
   }
 
@@ -124,7 +150,9 @@ export function MessageBubble({
             "max-w-[85%] rounded-xl px-3 py-2 text-[13px] leading-snug",
             isUser
               ? "bg-primary text-primary-foreground"
-              : "bg-muted text-foreground",
+              : isError
+                ? "border border-destructive/30 bg-destructive/10 text-destructive"
+                : "bg-muted text-foreground",
           )}
         >
           {isUser && editing ? (
@@ -157,6 +185,15 @@ export function MessageBubble({
             </div>
           ) : isUser ? (
             <p className="whitespace-pre-wrap">{message.content || "\u00A0"}</p>
+          ) : isError ? (
+            <div className="flex gap-2">
+              <AlertTriangleIcon className="mt-0.75 size-3 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <Streamdown mode="static" components={chatStreamdownComponents}>
+                  {displayContent}
+                </Streamdown>
+              </div>
+            </div>
           ) : (
             <Streamdown
               mode={isStreaming ? "streaming" : "static"}
@@ -169,10 +206,18 @@ export function MessageBubble({
         </div>
       )}
 
-      {/* Edit / Rerun actions for user messages */}
-      {isUser && !editing && (onEdit || onRerun) && (
+      {/* Message actions */}
+      {!editing && !isStreaming && message.content && (
         <div className="flex gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
-          {onEdit && (
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Sao chép"
+          >
+            {copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
+          </button>
+          {isUser && onEdit && (
             <button
               type="button"
               onClick={startEdit}
@@ -182,7 +227,7 @@ export function MessageBubble({
               <PencilIcon size={12} />
             </button>
           )}
-          {onRerun && (
+          {isUser && onRerun && (
             <button
               type="button"
               onClick={onRerun}
@@ -190,6 +235,17 @@ export function MessageBubble({
               title="Chạy lại tin nhắn"
             >
               <RefreshCwIcon size={12} />
+            </button>
+          )}
+          {isError && getErrorTrace(message.id) && (
+            <button
+              type="button"
+              onClick={handleDownloadTrace}
+              className="flex items-center gap-1 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Tải trace log"
+            >
+              <DownloadIcon size={12} />
+              <BugIcon size={12} />
             </button>
           )}
         </div>
