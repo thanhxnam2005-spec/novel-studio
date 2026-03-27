@@ -7,17 +7,20 @@ import { DEFAULT_CONVERT_OPTIONS } from "@/lib/workers/qt-engine.types";
 
 const SINGLETON_ID = "convert-settings";
 
-export function useConvertSettings(): ConvertOptions {
+/** Keys to extract from DB row → ConvertOptions (auto-syncs when adding fields) */
+const OPTION_KEYS = Object.keys(
+  DEFAULT_CONVERT_OPTIONS,
+) as (keyof ConvertOptions)[];
+
+export function useConvertSettings(): Required<ConvertOptions> {
   const row = useLiveQuery(() => db.convertSettings.get(SINGLETON_ID), []);
   if (!row) return DEFAULT_CONVERT_OPTIONS;
-  return {
-    nameVsPriority: row.nameVsPriority as ConvertOptions["nameVsPriority"],
-    scopePriority: row.scopePriority as ConvertOptions["scopePriority"],
-    maxPhraseLength: row.maxPhraseLength,
-    vpLengthPriority: row.vpLengthPriority as ConvertOptions["vpLengthPriority"],
-    luatNhanMode: row.luatNhanMode as ConvertOptions["luatNhanMode"],
-    splitMode: row.splitMode as ConvertOptions["splitMode"],
-  };
+
+  const result = {} as Record<string, unknown>;
+  for (const key of OPTION_KEYS) {
+    result[key] = row[key as keyof typeof row] ?? DEFAULT_CONVERT_OPTIONS[key];
+  }
+  return result as Required<ConvertOptions>;
 }
 
 export async function updateConvertSettings(

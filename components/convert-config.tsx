@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   useConvertSettings,
   updateConvertSettings,
@@ -64,7 +65,7 @@ export function ConvertConfig() {
     <div className="space-y-3">
       <OptionGroup<NameVsPriority>
         label="Ưu tiên từ điển"
-        value={settings.nameVsPriority ?? "name-first"}
+        value={settings.nameVsPriority}
         onChange={(v) => update({ nameVsPriority: v })}
         options={[
           { value: "name-first", label: "Name > VP" },
@@ -74,7 +75,7 @@ export function ConvertConfig() {
 
       <OptionGroup<ScopePriority>
         label="Ưu tiên phạm vi"
-        value={settings.scopePriority ?? "novel-first"}
+        value={settings.scopePriority}
         onChange={(v) => update({ scopePriority: v })}
         options={[
           { value: "novel-first", label: "Riêng > Chung" },
@@ -84,10 +85,10 @@ export function ConvertConfig() {
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">
-          Cụm từ dài nhất: {settings.maxPhraseLength ?? 12}
+          Cụm từ dài nhất: {settings.maxPhraseLength}
         </Label>
         <Slider
-          value={[settings.maxPhraseLength ?? 12]}
+          value={[settings.maxPhraseLength]}
           onValueChange={([v]) => update({ maxPhraseLength: v })}
           min={4}
           max={20}
@@ -98,7 +99,7 @@ export function ConvertConfig() {
 
       <OptionGroup<VpLengthPriority>
         label="Ưu tiên độ dài VP"
-        value={settings.vpLengthPriority ?? "none"}
+        value={settings.vpLengthPriority}
         onChange={(v) => update({ vpLengthPriority: v })}
         options={[
           { value: "none", label: "Không" },
@@ -110,7 +111,7 @@ export function ConvertConfig() {
 
       <OptionGroup<LuatNhanMode>
         label="Luật nhân"
-        value={settings.luatNhanMode ?? "name-only"}
+        value={settings.luatNhanMode}
         onChange={(v) => update({ luatNhanMode: v })}
         options={[
           { value: "off", label: "Không nhân" },
@@ -121,13 +122,24 @@ export function ConvertConfig() {
 
       <OptionGroup<SplitMode>
         label="Phân tách đoạn dịch"
-        value={settings.splitMode ?? "paragraph"}
+        value={settings.splitMode}
         onChange={(v) => update({ splitMode: v })}
         options={[
           { value: "paragraph", label: "Theo đoạn" },
           { value: "sentence", label: "Theo câu" },
         ]}
       />
+
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor="capitalize-brackets" className="text-xs font-medium">
+          Viết hoa trong 《》«»
+        </Label>
+        <Switch
+          id="capitalize-brackets"
+          checked={settings.capitalizeBrackets}
+          onCheckedChange={(v) => update({ capitalizeBrackets: v })}
+        />
+      </div>
     </div>
   );
 }

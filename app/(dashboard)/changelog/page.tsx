@@ -2,6 +2,11 @@
 
 import { Badge } from "@/components/ui/badge";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   CATEGORY_META,
   changelog,
   type ChangeCategory,
@@ -11,6 +16,7 @@ import {
 import {
   AlertTriangleIcon,
   BugIcon,
+  ChevronRightIcon,
   FilterIcon,
   RefreshCwIcon,
   SparklesIcon,
@@ -48,7 +54,7 @@ function CategoryBadge({ category }: { category: ChangeCategory }) {
 function ChangeItem({ entry }: { entry: ChangeEntry }) {
   return (
     <li className="flex gap-3 py-2 first:pt-0 last:pb-0">
-      <div className="w-[140px] shrink-0 pt-px">
+      <div className="w-[120px] shrink-0 pt-px">
         <CategoryBadge category={entry.category} />
         {entry.tags && entry.tags.length > 0 && (
           <div className="mt-0.5 flex flex-wrap gap-1">
@@ -105,39 +111,51 @@ function ReleaseCard({
         }`}
       />
 
-      {/* Release header */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-sm font-semibold text-foreground">
-          v{release.version}
-        </span>
-        <span className="text-xs text-muted-foreground">{formattedDate}</span>
-        {isLatest && (
-          <Badge variant="default" className="h-4 text-[10px]">
-            Mới nhất
-          </Badge>
-        )}
-      </div>
+      <Collapsible defaultOpen={isLatest}>
+        {/* Release header — acts as trigger */}
+        <CollapsibleTrigger className="group/trigger flex w-full cursor-pointer items-center gap-2 text-left">
+          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-data-[state=open]/trigger:rotate-90" />
+          <span className="font-mono text-sm font-semibold text-foreground">
+            v{release.version}
+          </span>
+          <span className="text-xs text-muted-foreground">{formattedDate}</span>
+          {isLatest && (
+            <Badge variant="default" className="h-4 text-[10px]">
+              Mới nhất
+            </Badge>
+          )}
+          {release.title && (
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              — {release.title}
+            </span>
+          )}
+        </CollapsibleTrigger>
 
-      {/* Release title & summary */}
-      {release.title && (
-        <h3 className="mb-1 font-heading text-lg font-semibold tracking-tight text-foreground">
-          {release.title}
-        </h3>
-      )}
-      {release.summary && (
-        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-          {release.summary}
-        </p>
-      )}
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down p-0.5">
+          {/* Release title & summary */}
+          <div className="mt-3">
+            {release.title && (
+              <h3 className="mb-1 font-heading text-lg font-semibold tracking-tight text-foreground">
+                {release.title}
+              </h3>
+            )}
+            {release.summary && (
+              <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+                {release.summary}
+              </p>
+            )}
 
-      {/* Changes list */}
-      <div className="rounded-xl bg-card ring-1 ring-foreground/10">
-        <ul className="divide-y divide-border px-4 py-3">
-          {release.changes.map((entry, i) => (
-            <ChangeItem key={i} entry={entry} />
-          ))}
-        </ul>
-      </div>
+            {/* Changes list */}
+            <div className="rounded-xl bg-card ring-1 ring-foreground/10">
+              <ul className="divide-y divide-border px-4 py-3">
+                {release.changes.map((entry, i) => (
+                  <ChangeItem key={i} entry={entry} />
+                ))}
+              </ul>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

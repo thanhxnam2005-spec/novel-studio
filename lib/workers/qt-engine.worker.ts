@@ -1,21 +1,16 @@
 import type {
+  ConvertOptions,
+  ConvertSegment,
+  ConvertSource,
+  DictPair,
   QTWorkerRequest,
   QTWorkerResponse,
-  ConvertSegment,
-  ConvertOptions,
-  DictPair,
-  ConvertSource,
 } from "./qt-engine.types";
 import { DEFAULT_CONVERT_OPTIONS } from "./qt-engine.types";
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-/**
- * Pick primary translation from QT-style slash-separated alternatives.
- * Convention: first value before '/' is primary. If it's empty (leading '/'),
- * the particle can be omitted — but we still pick the first non-empty alternative
- * so plain text output is meaningful.
- */
+/** Pick first non-empty translation from QT-style "a/b/c" alternatives. */
 function pickPrimary(value: string): string {
   if (!value.includes("/")) return value;
   const parts = value.split("/");
@@ -26,21 +21,17 @@ function pickPrimary(value: string): string {
   return value;
 }
 
-/** Capitalize first letter of each space-separated word: "lục trúc" → "Lục Trúc" */
 function capitalizeWords(str: string): string {
   if (!str) return str;
   return str.replace(/(?<=^|\s)\p{Ll}/gu, (c) => c.toUpperCase());
 }
 
-/** Capitalize first letter of the string */
 function capitalizeFirst(str: string): string {
   if (!str) return str;
-  // Find the first letter character and capitalize it
   for (let i = 0; i < str.length; i++) {
     if (/\p{Ll}/u.test(str[i])) {
       return str.slice(0, i) + str[i].toUpperCase() + str.slice(i + 1);
     }
-    // If we hit an already-uppercase letter, it's already capitalized
     if (/\p{Lu}/u.test(str[i])) return str;
   }
   return str;
@@ -52,18 +43,72 @@ const NAME_SOURCES = new Set<ConvertSource>([
   "global-name",
 ]);
 
-const SENTENCE_ENDERS = /[.!?。！？…\n]/;
+const SENTENCE_ENDERS = /[.!?。！？…\n：:；;]/;
+const CAP_TRIGGERS = /[《«]/;
+const CAP_PASSTHROUGH =
+  /^[\s\u3000""''「『（(\[{<》」』）\])}>《》«»，、；：,.:;!?。！？…～·\-–—\u201c\u201d\u2018\u2019]+$/;
 
-// No space BEFORE these characters
 const NO_SPACE_BEFORE =
-  /[,.:;!?。，、；：！？…\u201c\u201d\u2018\u2019」』）\])}>～·\-–—\s]/;
+  /[,.:;!?。，、；：！？…\u201c\u201d\u2018\u2019」』）\])}>》»～·\-–—\s]/;
+const NO_SPACE_AFTER = /[\u201c\u201d\u2018\u2019「『（\[({<《«\s]/;
+const DIGIT_TRAILING = /\d$/;
+const DIGIT_LEADING = /^\d/;
 
-// No space AFTER these characters (opening punctuation / whitespace)
-const NO_SPACE_AFTER = /[\u201c\u201d\u2018\u2019「『（\[({<\s]/;
+// ─── Full-width → ASCII punctuation ─────────────────────────
+
+const FULLWIDTH_PUNCT: Record<string, string> = {
+  "，": ",",
+  "。": ".",
+  "：": ":",
+  "；": ";",
+  "！": "!",
+  "？": "?",
+  "（": "(",
+  "）": ")",
+  "【": "[",
+  "】": "]",
+  "、": ",",
+  "～": "~",
+  "\u3000": " ",
+  "……": "...",
+};
+
+const FULLWIDTH_RE = new RegExp(
+  Object.keys(FULLWIDTH_PUNCT)
+    .sort((a, b) => b.length - a.length)
+    .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|"),
+  "g",
+);
+
+function normalizeFullwidthPunct(text: string): string {
+  return text.replace(FULLWIDTH_RE, (m) => FULLWIDTH_PUNCT[m] ?? m);
+}
+
+// ─── Particle overrides ──────────────────────────────────────
+
+const PARTICLE_OVERRIDES: Record<string, string> = {
+  的: "của",
+  了: "",
+  着: "đang",
+  过: "qua",
+  吗: "sao",
+  呢: "đây",
+  吧: "đi",
+  啊: "a",
+  哦: "ồ",
+  嗯: "ừ",
+  哈: "ha",
+  啦: "rồi",
+  嘛: "mà",
+  呀: "a",
+  哩: "lý",
+  喽: "rồi",
+};
 
 // ─── State ───────────────────────────────────────────────────
 
-let namesMap: Map<string, string>; // Names + Names2 merged
+let namesMap: Map<string, string>;
 let vietPhraseMap: Map<string, string>;
 let phienAmMap: Map<string, string>;
 let luatNhanPatterns: Array<{
@@ -84,21 +129,22 @@ function initDicts(dictData: Record<string, DictPair[]>): void {
   luatNhanPatterns = [];
   luatNhanPrefixIndex = new Map();
 
-  // Names + Names2 — pick primary, auto-capitalize proper names
   for (const e of dictData.names ?? [])
     namesMap.set(e.chinese, capitalizeWords(pickPrimary(e.vietnamese)));
   for (const e of dictData.names2 ?? [])
     namesMap.set(e.chinese, capitalizeWords(pickPrimary(e.vietnamese)));
 
-  // VietPhrase — pick primary translation
-  for (const e of dictData.vietphrase ?? [])
-    vietPhraseMap.set(e.chinese, pickPrimary(e.vietnamese));
+  for (const e of dictData.vietphrase ?? []) {
+    if (e.chinese in PARTICLE_OVERRIDES) {
+      vietPhraseMap.set(e.chinese, PARTICLE_OVERRIDES[e.chinese]);
+    } else {
+      vietPhraseMap.set(e.chinese, pickPrimary(e.vietnamese));
+    }
+  }
 
-  // PhienAm (single-char fallback) — pick primary translation
   for (const e of dictData.phienam ?? [])
     phienAmMap.set(e.chinese, pickPrimary(e.vietnamese));
 
-  // LuatNhan — parse {0} patterns
   for (const e of dictData.luatnhan ?? []) {
     const idx = e.chinese.indexOf("{0}");
     if (idx < 0) continue;
@@ -111,7 +157,6 @@ function initDicts(dictData: Record<string, DictPair[]>): void {
     });
   }
 
-  // Build prefix index for LuatNhan
   for (let i = 0; i < luatNhanPatterns.length; i++) {
     const p = luatNhanPatterns[i];
     if (p.prefix.length > 0) {
@@ -123,7 +168,6 @@ function initDicts(dictData: Record<string, DictPair[]>): void {
     }
   }
 
-  // Compute max key lengths
   maxKeyLength = 0;
   for (const k of namesMap.keys())
     if (k.length > maxKeyLength) maxKeyLength = k.length;
@@ -145,7 +189,6 @@ function convert(
 ): ConvertSegment[] {
   const o = { ...DEFAULT_CONVERT_OPTIONS, ...opts };
 
-  // Build priority Maps for this conversion — apply pickPrimary + capitalizeWords for names
   const novelNamesMap = novelNames?.length
     ? new Map(
         novelNames.map((e) => [
@@ -163,29 +206,28 @@ function convert(
       )
     : null;
 
-  // Build filtered vietphrase based on vpLengthPriority
   let filteredVP = vietPhraseMap;
   if (o.vpLengthPriority !== "none") {
     const minLen =
-      o.vpLengthPriority === "vp-gt-3" ? 4 :
-      o.vpLengthPriority === "vp-gt-4" ? 5 : 0;
+      o.vpLengthPriority === "vp-gt-3"
+        ? 4
+        : o.vpLengthPriority === "vp-gt-4"
+          ? 5
+          : 0;
     if (minLen > 0) {
       filteredVP = new Map();
       for (const [k, v] of vietPhraseMap) {
         if (k.length >= minLen) filteredVP.set(k, v);
       }
-      // Keep single-char VP entries as fallback — they're essential
       for (const [k, v] of vietPhraseMap) {
         if (k.length === 1 && !filteredVP.has(k)) filteredVP.set(k, v);
       }
     }
   }
 
-  // Build priority order based on nameVsPriority and scopePriority
   type PriorityEntry = [ConvertSource, Map<string, string>];
   const priorityMaps: PriorityEntry[] = [];
 
-  // Name maps ordered by scope priority
   const orderedNameMaps: PriorityEntry[] = [];
   if (o.scopePriority === "novel-first") {
     if (novelNamesMap) orderedNameMaps.push(["novel-name", novelNamesMap]);
@@ -196,7 +238,6 @@ function convert(
   }
   orderedNameMaps.push(["qt-name", namesMap]);
 
-  // Name vs VP priority
   if (o.nameVsPriority === "name-first") {
     priorityMaps.push(...orderedNameMaps);
     priorityMaps.push(["vietphrase", filteredVP]);
@@ -205,30 +246,24 @@ function convert(
     priorityMaps.push(...orderedNameMaps);
   }
 
-  // Combined names for LuatNhan {0} matching (already capitalized from Maps)
   const allNames = new Map(namesMap);
-  if (globalNamesMap)
-    for (const [k, v] of globalNamesMap) allNames.set(k, v);
-  if (novelNamesMap)
-    for (const [k, v] of novelNamesMap) allNames.set(k, v);
+  if (globalNamesMap) for (const [k, v] of globalNamesMap) allNames.set(k, v);
+  if (novelNamesMap) for (const [k, v] of novelNamesMap) allNames.set(k, v);
 
-  // Compute effective max key/name lengths (capped by maxPhraseLength option)
   let effectiveMaxKey = Math.min(maxKeyLength, o.maxPhraseLength);
   let effectiveMaxName = maxNameLength;
   if (novelNamesMap)
     for (const k of novelNamesMap.keys()) {
-      if (k.length > effectiveMaxKey) effectiveMaxKey = Math.min(k.length, o.maxPhraseLength);
+      if (k.length > effectiveMaxKey)
+        effectiveMaxKey = Math.min(k.length, o.maxPhraseLength);
       if (k.length > effectiveMaxName) effectiveMaxName = k.length;
     }
   if (globalNamesMap)
     for (const k of globalNamesMap.keys()) {
-      if (k.length > effectiveMaxKey) effectiveMaxKey = Math.min(k.length, o.maxPhraseLength);
+      if (k.length > effectiveMaxKey)
+        effectiveMaxKey = Math.min(k.length, o.maxPhraseLength);
       if (k.length > effectiveMaxName) effectiveMaxName = k.length;
     }
-
-  // For "long-first" VP priority, we want to prefer longer VP matches
-  // This is already the default behavior (longest-match-first), so no change needed
-  // The option is mainly to distinguish from the min-length filters
 
   const segments: ConvertSegment[] = [];
   let i = 0;
@@ -236,39 +271,34 @@ function convert(
   while (i < text.length) {
     let matched = false;
 
-    // 1. Try LuatNhan patterns (prefix index lookup) — skip if luatNhanMode is "off"
+    // 1. LuatNhan patterns
     const char = text[i];
-    const patternIndices = o.luatNhanMode !== "off" ? luatNhanPrefixIndex.get(char) : undefined;
+    const patternIndices =
+      o.luatNhanMode !== "off" ? luatNhanPrefixIndex.get(char) : undefined;
     if (patternIndices) {
       for (const pi of patternIndices) {
         const pattern = luatNhanPatterns[pi];
         if (!text.startsWith(pattern.prefix, i)) continue;
 
         const searchStart = i + pattern.prefix.length;
-        // Try longest name first
         for (
-          let nameLen = Math.min(
-            effectiveMaxName,
-            text.length - searchStart,
-          );
+          let nameLen = Math.min(effectiveMaxName, text.length - searchStart);
           nameLen >= 1;
           nameLen--
         ) {
           const candidate = text.slice(searchStart, searchStart + nameLen);
-          // "name-only": match only against name dicts; "name-and-pronouns": also match VP
-          const luatNhanMatch = allNames.has(candidate) ||
-            (o.luatNhanMode === "name-and-pronouns" && filteredVP.has(candidate));
+          const luatNhanMatch =
+            allNames.has(candidate) ||
+            (o.luatNhanMode === "name-and-pronouns" &&
+              filteredVP.has(candidate));
           if (!luatNhanMatch) continue;
 
           const suffixStart = searchStart + nameLen;
           if (!text.startsWith(pattern.suffix, suffixStart)) continue;
 
-          // Match!
-          const translatedName = allNames.get(candidate) ?? filteredVP.get(candidate) ?? candidate;
-          const translation = pattern.template.replace(
-            "{0}",
-            translatedName,
-          );
+          const translatedName =
+            allNames.get(candidate) ?? filteredVP.get(candidate) ?? candidate;
+          const translation = pattern.template.replace("{0}", translatedName);
           const matchEnd = suffixStart + pattern.suffix.length;
           segments.push({
             original: text.slice(i, matchEnd),
@@ -283,18 +313,14 @@ function convert(
       }
     }
 
-    // 2. Try priority Maps (longest match first)
+    // 2. Priority Maps (longest match first)
     if (!matched) {
       const maxLen = Math.min(effectiveMaxKey, text.length - i);
       for (let j = maxLen; j >= 1; j--) {
         const sub = text.slice(i, i + j);
         for (const [source, map] of priorityMaps) {
           if (map.has(sub)) {
-            segments.push({
-              original: sub,
-              translated: map.get(sub)!,
-              source,
-            });
+            segments.push({ original: sub, translated: map.get(sub)!, source });
             i += j;
             matched = true;
             break;
@@ -304,7 +330,7 @@ function convert(
       }
     }
 
-    // 3. Fallback to PhienAm (single character)
+    // 3. PhienAm fallback
     if (!matched) {
       const c = text[i];
       if (phienAmMap.has(c)) {
@@ -320,55 +346,88 @@ function convert(
     }
   }
 
-  // Post-process: auto-capitalize sentence starts
+  capitalizeNameAdjacent(segments);
   capitalizeSentences(segments);
+  if (o.capitalizeBrackets) capitalizeBracketContent(segments);
 
   return segments;
 }
 
 // ─── Post-processing ─────────────────────────────────────────
 
-/**
- * Capitalize the first letter of each sentence in-place.
- * A "sentence start" is: beginning of text, after sentence-ending punctuation,
- * or after a newline (new paragraph). Skips over whitespace and opening quotes
- * to find the first translatable word.
- */
+/** Chinese suffixes that capitalize when following a name (geographic, titles, orgs) */
+const NAME_SUFFIXES = new Set(
+  "省市县区镇村山河湖海岛峰谷关城宫殿阁楼塔寺庙庄府院堂门派宗帝王皇后妃侯公伯子爵将帅族氏家國国".split(
+    "",
+  ),
+);
+
+function capitalizeNameAdjacent(segments: ConvertSegment[]): void {
+  for (let i = 1; i < segments.length; i++) {
+    const prev = segments[i - 1];
+    const seg = segments[i];
+    if (
+      NAME_SOURCES.has(prev.source) &&
+      !NAME_SOURCES.has(seg.source) &&
+      seg.source !== "unknown" &&
+      seg.original.length === 1 &&
+      NAME_SUFFIXES.has(seg.original)
+    ) {
+      const capped = capitalizeWords(seg.translated);
+      if (capped !== seg.translated)
+        segments[i] = { ...seg, translated: capped };
+    }
+  }
+}
+
+const BRACKET_OPEN = /[《«]/;
+const BRACKET_CLOSE = /[》»]/;
+
+function capitalizeBracketContent(segments: ConvertSegment[]): void {
+  let inside = false;
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const text = seg.source === "unknown" ? seg.original : seg.translated;
+    if (BRACKET_OPEN.test(text)) {
+      inside = true;
+      continue;
+    }
+    if (BRACKET_CLOSE.test(text)) {
+      inside = false;
+      continue;
+    }
+    if (inside && seg.source !== "unknown") {
+      const capped = capitalizeWords(seg.translated);
+      if (capped !== seg.translated)
+        segments[i] = { ...seg, translated: capped };
+    }
+  }
+}
+
 function capitalizeSentences(segments: ConvertSegment[]): void {
-  let needsCap = true; // start of text
+  let needsCap = true;
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
-    const text =
-      seg.source === "unknown" ? seg.original : seg.translated;
+    const text = seg.source === "unknown" ? seg.original : seg.translated;
 
-    if (needsCap && seg.source !== "unknown" && !NAME_SOURCES.has(seg.source)) {
-      // Capitalize this translated segment
-      const capped = capitalizeFirst(seg.translated);
-      if (capped !== seg.translated) {
-        segments[i] = { ...seg, translated: capped };
-      }
-      needsCap = false;
-    }
-
-    // Check if this segment ends a sentence → next word needs capitalization
-    const lastChar = text.trimEnd().slice(-1);
-    if (lastChar && SENTENCE_ENDERS.test(lastChar)) {
-      needsCap = true;
-    }
-
-    // "unknown" segments that are only whitespace / opening quotes don't reset needsCap
-    if (
-      seg.source === "unknown" &&
-      needsCap &&
-      /^[\s\u3000""''「『（(\[{<]+$/.test(seg.original)
-    ) {
-      // Keep needsCap = true, skip over whitespace/opening-quotes
-    } else if (seg.source !== "unknown") {
-      // Name sources are already capitalized, so they "consume" the needsCap
-      if (needsCap && NAME_SOURCES.has(seg.source)) {
+    if (needsCap) {
+      if (NAME_SOURCES.has(seg.source)) {
+        needsCap = false;
+      } else if (seg.source !== "unknown") {
+        const capped = capitalizeFirst(seg.translated);
+        if (capped !== seg.translated)
+          segments[i] = { ...seg, translated: capped };
+        needsCap = false;
+      } else if (CAP_PASSTHROUGH.test(seg.original)) {
+        // Punctuation/whitespace — pass through, keep needsCap
+      } else {
         needsCap = false;
       }
+    }
+
+    if (SENTENCE_ENDERS.test(text) || CAP_TRIGGERS.test(text)) {
+      needsCap = true;
     }
   }
 }
@@ -380,14 +439,13 @@ function segmentsToPlainText(segments: ConvertSegment[]): string {
 
   for (const seg of segments) {
     if (seg.source === "unknown") {
-      parts.push(seg.original);
+      parts.push(normalizeFullwidthPunct(seg.original));
       continue;
     }
 
     const translated = seg.translated;
     if (!translated) continue;
 
-    // Determine whether to insert a space before this word
     if (parts.length > 0) {
       const prev = parts[parts.length - 1];
       const lastChar = prev.slice(-1);
@@ -396,24 +454,19 @@ function segmentsToPlainText(segments: ConvertSegment[]): string {
       const shouldAddSpace =
         lastChar !== undefined &&
         firstChar !== undefined &&
-        // No space after whitespace / newlines
         lastChar !== " " &&
         lastChar !== "\n" &&
         lastChar !== "\u3000" &&
-        // No space after opening punctuation
         !NO_SPACE_AFTER.test(lastChar) &&
-        // No space before closing punctuation / commas / dots
-        !NO_SPACE_BEFORE.test(firstChar);
+        !NO_SPACE_BEFORE.test(firstChar) &&
+        !(DIGIT_TRAILING.test(lastChar) && DIGIT_LEADING.test(firstChar));
 
-      if (shouldAddSpace) {
-        parts.push(" ");
-      }
+      if (shouldAddSpace) parts.push(" ");
     }
 
     parts.push(translated);
   }
 
-  // Clean up: collapse multiple consecutive ASCII spaces only
   return parts.join("").replace(/ {2,}/g, " ");
 }
 
@@ -443,7 +496,12 @@ self.onmessage = (event: MessageEvent<QTWorkerRequest>) => {
 
     case "convert": {
       try {
-        const segments = convert(msg.text, msg.novelNames, msg.globalNames, msg.options);
+        const segments = convert(
+          msg.text,
+          msg.novelNames,
+          msg.globalNames,
+          msg.options,
+        );
         const plainText = segmentsToPlainText(segments);
         post({ type: "result", id: msg.id, segments, plainText });
       } catch (err) {
@@ -479,7 +537,7 @@ self.onmessage = (event: MessageEvent<QTWorkerRequest>) => {
         post({
           type: "error",
           id: msg.id,
-          message: `Batch convert failed: ${err instanceof Error ? err.message : String(err)}`,
+          message: `Batch failed: ${err instanceof Error ? err.message : String(err)}`,
         });
       }
       break;

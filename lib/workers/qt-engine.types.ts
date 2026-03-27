@@ -48,6 +48,8 @@ export interface ConvertOptions {
   luatNhanMode?: LuatNhanMode;
   /** Split mode for text processing (default: "paragraph") */
   splitMode?: SplitMode;
+  /** Capitalize all words inside 《》 and «» brackets (default: false) */
+  capitalizeBrackets?: boolean;
 }
 
 export const DEFAULT_CONVERT_OPTIONS: Required<ConvertOptions> = {
@@ -57,6 +59,7 @@ export const DEFAULT_CONVERT_OPTIONS: Required<ConvertOptions> = {
   vpLengthPriority: "none",
   luatNhanMode: "name-only",
   splitMode: "paragraph",
+  capitalizeBrackets: false,
 };
 
 // Main → Worker

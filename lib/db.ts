@@ -264,6 +264,7 @@ export interface ConvertSettings {
   vpLengthPriority: string;
   luatNhanMode: string;
   splitMode: string;
+  capitalizeBrackets?: boolean;
 }
 
 // ─── Database ────────────────────────────────────────────────
