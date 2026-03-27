@@ -69,7 +69,7 @@ export const changelog: ChangelogRelease[] = [
     date: "2026-03-28",
     title: "Nhận diện tên tự động & Mở rộng từ điển",
     summary:
-      "Engine convert tự nhận diện tên nhân vật/địa danh dựa trên họ và tần suất xuất hiện. Loại trừ tên sai để revert bản dịch. Bổ sung hơn 400 tên nổi tiếng và 116 luật nhân mới.",
+      "Engine convert tự nhận diện tên nhân vật/địa danh dựa trên họ và tần suất xuất hiện. Loại trừ tên sai để revert bản dịch. Bổ sung hơn 400 tên nổi tiếng mới.",
     changes: [
       {
         category: "feature",
