@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/db";
 import { updateConversation } from "@/lib/hooks";
 import { useChatPanel } from "@/lib/stores/chat-panel";
-import { db } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
 import { BookOpenIcon, XIcon } from "lucide-react";
 
@@ -37,17 +37,12 @@ export function NovelContextBadge() {
     }
   };
 
-  const label = chapter
-    ? `${novel.title} / ${chapter.title}`
-    : novel.title;
+  const label = chapter ? `${novel.title} / ${chapter.title}` : novel.title;
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5 border-b bg-muted/30 px-3 py-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 border-t bg-muted/30 px-3 py-1.5">
       <BookOpenIcon className="size-3 shrink-0 text-muted-foreground" />
-      <span
-        className="truncate text-xs text-muted-foreground"
-        title={label}
-      >
+      <span className="truncate text-xs text-muted-foreground" title={label}>
         {label}
       </span>
       <Button

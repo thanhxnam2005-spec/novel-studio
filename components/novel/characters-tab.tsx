@@ -2,27 +2,6 @@
 
 import { useState } from "react";
 import {
-  ChevronDownIcon,
-  PencilIcon,
-  PlusIcon,
-  TrashIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardAction,
-} from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -32,21 +11,119 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import type { Character } from "@/lib/db";
 import { deleteCharacter } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
+import {
+  ChevronDownIcon,
+  CrosshairIcon,
+  HeartIcon,
+  LinkIcon,
+  PencilIcon,
+  PlusIcon,
+  RouteIcon,
+  ShieldIcon,
+  SparklesIcon,
+  SwordsIcon,
+  TargetIcon,
+  TrashIcon,
+  UserIcon,
+  ZapIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 import { CharacterEditDialog } from "./character-edit-dialog";
 
-function DetailRow({ label, value }: { label: string; value?: string }) {
+// ─── Detail row with icon + color ───────────────────────────
+
+const DETAIL_CONFIG: Record<
+  string,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }
+> = {
+  appearance: {
+    icon: SparklesIcon,
+    color: "text-pink-500 dark:text-pink-400",
+  },
+  personality: {
+    icon: HeartIcon,
+    color: "text-rose-500 dark:text-rose-400",
+  },
+  hobbies: {
+    icon: ZapIcon,
+    color: "text-amber-500 dark:text-amber-400",
+  },
+  relationshipWithMC: {
+    icon: LinkIcon,
+    color: "text-blue-500 dark:text-blue-400",
+  },
+  characterArc: {
+    icon: RouteIcon,
+    color: "text-emerald-500 dark:text-emerald-400",
+  },
+  strengths: {
+    icon: ShieldIcon,
+    color: "text-green-500 dark:text-green-400",
+  },
+  weaknesses: {
+    icon: SwordsIcon,
+    color: "text-red-500 dark:text-red-400",
+  },
+  motivations: {
+    icon: CrosshairIcon,
+    color: "text-violet-500 dark:text-violet-400",
+  },
+  goals: {
+    icon: TargetIcon,
+    color: "text-cyan-500 dark:text-cyan-400",
+  },
+};
+
+function DetailRow({
+  field,
+  label,
+  value,
+}: {
+  field: string;
+  label: string;
+  value?: string;
+}) {
   if (!value || value === "Unknown" || value === "N/A") return null;
+  const config = DETAIL_CONFIG[field];
+  const Icon = config?.icon ?? ZapIcon;
+  const color = config?.color ?? "text-muted-foreground";
+
   return (
-    <div>
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className="text-xs leading-relaxed">{value}</p>
+    <div className="flex gap-2.5">
+      <Icon className={cn("mt-0.5 size-3.5 shrink-0", color)} />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          {label}
+        </p>
+        <p className="text-xs leading-relaxed">{value}</p>
+      </div>
     </div>
   );
 }
+
+// ─── Character card ─────────────────────────────────────────
 
 function CharacterCard({
   char,
@@ -72,37 +149,48 @@ function CharacterCard({
     (char.relationships && char.relationships.length > 0);
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <Collapsible open={open} onOpenChange={setOpen}>
         <CardHeader className="pb-2">
-          <div className="flex items-start gap-2">
-            {hasDetails && (
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="mt-0.5 shrink-0"
-                >
-                  <ChevronDownIcon
-                    className={`size-3.5 transition-transform ${open ? "" : "-rotate-90"}`}
-                  />
-                </Button>
-              </CollapsibleTrigger>
-            )}
+          <div className="flex items-start gap-2.5">
+            {/* Avatar placeholder with initial */}
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-sm font-bold text-violet-600 dark:bg-violet-500/15 dark:text-violet-400">
+              {char.name.charAt(0)}
+            </span>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-sm">{char.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm">{char.name}</CardTitle>
+                {hasDetails && (
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="shrink-0"
+                    >
+                      <ChevronDownIcon
+                        className={cn(
+                          "size-3.5 transition-transform",
+                          open && "rotate-180",
+                        )}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                )}
+              </div>
               {(char.role || char.age || char.sex) && (
-                <CardDescription className="flex flex-wrap items-center gap-1.5">
+                <CardDescription className="mt-0.5 flex flex-wrap items-center gap-1.5">
                   {char.role && (
-                    <Badge variant="outline" className="text-[11px]">
+                    <Badge variant="outline" className="text-[10px]">
                       {char.role}
                     </Badge>
                   )}
                   {char.sex && char.sex !== "Unknown" && (
-                    <span className="text-xs">{char.sex}</span>
+                    <span className="text-[11px]">{char.sex}</span>
                   )}
                   {char.age && char.age !== "Unknown" && (
-                    <span className="text-xs">· {char.age}</span>
+                    <span className="text-[11px] text-muted-foreground/60">
+                      {char.age}
+                    </span>
                   )}
                 </CardDescription>
               )}
@@ -110,18 +198,10 @@ function CharacterCard({
           </div>
           <CardAction>
             <div className="flex gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onEdit}
-              >
+              <Button variant="ghost" size="icon-xs" onClick={onEdit}>
                 <PencilIcon className="size-3" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onDelete}
-              >
+              <Button variant="ghost" size="icon-xs" onClick={onDelete}>
                 <TrashIcon className="size-3" />
               </Button>
             </div>
@@ -134,38 +214,77 @@ function CharacterCard({
           </p>
 
           <CollapsibleContent>
-            <Separator className="my-2.5" />
-            <div className="space-y-2.5">
-              <DetailRow label="Ngoại hình" value={char.appearance} />
-              <DetailRow label="Tính cách" value={char.personality} />
-              <DetailRow label="Sở thích" value={char.hobbies} />
+            <Separator className="my-3" />
+            <div className="space-y-3">
               <DetailRow
+                field="appearance"
+                label="Ngoại hình"
+                value={char.appearance}
+              />
+              <DetailRow
+                field="personality"
+                label="Tính cách"
+                value={char.personality}
+              />
+              <DetailRow
+                field="hobbies"
+                label="Sở thích"
+                value={char.hobbies}
+              />
+              <DetailRow
+                field="relationshipWithMC"
                 label="Quan hệ với nhân vật chính"
                 value={char.relationshipWithMC}
               />
               {char.relationships && char.relationships.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-muted-foreground">
-                    Mối quan hệ
-                  </p>
-                  <div className="mt-0.5 space-y-0.5">
-                    {char.relationships.map((r, i) => (
-                      <p key={i} className="text-xs">
-                        <span className="font-medium">{r.characterName}</span>
-                        <span className="text-muted-foreground">
-                          {" "}
-                          — {r.description}
-                        </span>
-                      </p>
-                    ))}
+                <div className="flex gap-2.5">
+                  <LinkIcon className="mt-0.5 size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                      Mối quan hệ
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {char.relationships.map((r, i) => (
+                        <div
+                          key={i}
+                          className="flex items-baseline gap-1.5 text-xs"
+                        >
+                          <span className="font-medium">{r.characterName}</span>
+                          <span className="text-muted-foreground/70">—</span>
+                          <span className="text-muted-foreground">
+                            {r.description}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
-              <DetailRow label="Hành trình nhân vật" value={char.characterArc} />
-              <DetailRow label="Điểm mạnh" value={char.strengths} />
-              <DetailRow label="Điểm yếu" value={char.weaknesses} />
-              <DetailRow label="Động lực" value={char.motivations} />
-              <DetailRow label="Mục tiêu" value={char.goals} />
+              <DetailRow
+                field="characterArc"
+                label="Hành trình nhân vật"
+                value={char.characterArc}
+              />
+              <DetailRow
+                field="strengths"
+                label="Điểm mạnh"
+                value={char.strengths}
+              />
+              <DetailRow
+                field="weaknesses"
+                label="Điểm yếu"
+                value={char.weaknesses}
+              />
+              <DetailRow
+                field="motivations"
+                label="Động lực"
+                value={char.motivations}
+              />
+              <DetailRow
+                field="goals"
+                label="Mục tiêu"
+                value={char.goals}
+              />
             </div>
           </CollapsibleContent>
         </CardContent>
@@ -173,6 +292,8 @@ function CharacterCard({
     </Card>
   );
 }
+
+// ─── Characters tab ─────────────────────────────────────────
 
 export function CharactersTab({
   characters,
@@ -200,9 +321,12 @@ export function CharactersTab({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {characters.length} nhân vật
-        </p>
+        <div className="flex items-center gap-2">
+          <UserIcon className="size-4 text-violet-500" />
+          <span className="text-sm text-muted-foreground">
+            {characters.length} nhân vật
+          </span>
+        </div>
         <Button size="sm" onClick={() => setAddOpen(true)}>
           <PlusIcon className="mr-1.5 size-3.5" />
           Thêm nhân vật
@@ -210,9 +334,15 @@ export function CharactersTab({
       </div>
 
       {characters.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Chưa có nhân vật. Thêm thủ công hoặc chạy phân tích.
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12">
+          <UserIcon className="size-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">
+            Chưa có nhân vật
+          </p>
+          <p className="text-xs text-muted-foreground/60">
+            Thêm thủ công hoặc chạy phân tích AI
+          </p>
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {characters.map((char) => (

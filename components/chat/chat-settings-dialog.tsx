@@ -34,6 +34,8 @@ export function ChatSettingsDialog({
   onSystemPromptChange,
   temperature,
   onTemperatureChange,
+  maxToolSteps,
+  onMaxToolStepsChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +49,8 @@ export function ChatSettingsDialog({
   onSystemPromptChange: (prompt: string) => void;
   temperature: number;
   onTemperatureChange: (temp: number) => void;
+  maxToolSteps: number;
+  onMaxToolStepsChange: (steps: number) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,6 +137,28 @@ export function ChatSettingsDialog({
               />
               <FieldDescription>
                 Thấp = tập trung hơn, cao = sáng tạo hơn.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel>
+                Giới hạn bước công cụ{" "}
+                <span className="font-mono text-xs text-muted-foreground">
+                  {maxToolSteps}
+                </span>
+              </FieldLabel>
+              <Input
+                type="range"
+                min={1}
+                max={10}
+                step={1}
+                value={maxToolSteps}
+                onChange={(e) =>
+                  onMaxToolStepsChange(parseInt(e.target.value))
+                }
+                className="h-2 cursor-pointer accent-primary"
+              />
+              <FieldDescription>
+                Số lần AI được gọi công cụ tra cứu trong một tin nhắn.
               </FieldDescription>
             </Field>
           </FieldGroup>

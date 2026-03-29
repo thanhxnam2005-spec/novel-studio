@@ -185,6 +185,8 @@ export interface ChatSettings {
   systemPrompt: string;
   temperature: number;
   globalSystemInstruction?: string;
+  /** Max tool-calling steps per message (default 5) */
+  maxToolSteps?: number;
 }
 
 export interface StepModelConfig {

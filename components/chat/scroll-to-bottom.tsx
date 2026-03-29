@@ -1,3 +1,4 @@
+import { ArrowDownIcon } from "lucide-react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
 export function ScrollToBottom() {
@@ -12,7 +13,7 @@ export function ScrollToBottom() {
         onClick={() => scrollToBottom()}
         className="rounded-full border bg-card px-3 py-1 text-[11px] text-muted-foreground shadow-sm transition-colors hover:bg-muted"
       >
-        ↓ Scroll to bottom
+        <ArrowDownIcon size={12} className="inline-block" /> Cuộn xuống
       </button>
     </div>
   );

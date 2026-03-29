@@ -41,8 +41,11 @@ import { exportNovel, downloadNovelJson } from "@/lib/novel-io";
 import {
   DownloadIcon,
   ExternalLinkIcon,
+  GlobeIcon,
   PencilIcon,
+  ScrollTextIcon,
   Trash2Icon,
+  UsersIcon,
 } from "lucide-react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -287,24 +290,32 @@ export default function NovelDetailPage() {
           });
         }}
       >
-        <TabsList className="w-full justify-center">
-          <TabsTrigger value="chapters">
+        <TabsList className="w-full justify-center gap-1 p-1">
+          <TabsTrigger value="chapters" className="gap-2 px-3 py-1.5">
+            <ScrollTextIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
             Chương
             {chapters && chapters.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                ({chapters.length})
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-500/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                {chapters.length}
               </span>
             )}
             {needsAnalysisCount > 0 && (
-              <span className="inline-flex size-2 rounded-full bg-amber-500" />
+              <span
+                className="inline-flex size-2 rounded-full bg-amber-500"
+                title={`${needsAnalysisCount} chương cần phân tích`}
+              />
             )}
           </TabsTrigger>
-          <TabsTrigger value="world-building">Thế giới quan</TabsTrigger>
-          <TabsTrigger value="characters">
+          <TabsTrigger value="world-building" className="gap-2 px-3 py-1.5">
+            <GlobeIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
+            Thế giới quan
+          </TabsTrigger>
+          <TabsTrigger value="characters" className="gap-2 px-3 py-1.5">
+            <UsersIcon className="size-3.5 text-violet-600 dark:text-violet-400" />
             Nhân vật
             {characters && characters.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                ({characters.length})
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-violet-500/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+                {characters.length}
               </span>
             )}
           </TabsTrigger>

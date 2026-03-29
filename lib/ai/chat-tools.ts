@@ -4,20 +4,22 @@ import { z } from "zod";
 
 const MAX_CONTENT_LENGTH = 8000;
 
-/** Resolve a chapter by UUID or by order number (1-based) within a novel. */
+/** Resolve a chapter by UUID or by order number within a novel. */
 async function resolveChapter(novelId: string, chapterRef: string) {
   // Try UUID lookup first
   const byId = await db.chapters.get(chapterRef);
   if (byId && byId.novelId === novelId) return byId;
 
-  // Try as order number (1-based)
+  // Try as order number (accepts both 0-based and 1-based)
   const num = Number(chapterRef);
-  if (Number.isInteger(num) && num > 0) {
+  if (Number.isInteger(num) && num >= 0) {
     const chapters = await db.chapters
       .where("novelId")
       .equals(novelId)
       .sortBy("order");
-    return chapters[num - 1] ?? null;
+    // 0 → first chapter, 1 → first chapter, 2 → second, etc.
+    const idx = num === 0 ? 0 : num - 1;
+    return chapters[idx] ?? null;
   }
 
   return null;

@@ -81,6 +81,7 @@ export function ChatPanel() {
       chatSettings.globalSystemInstruction,
     ) ?? "";
   const temperature = chatSettings.temperature;
+  const maxToolSteps = chatSettings.maxToolSteps ?? 5;
   const selectedProvider = providers?.find((p) => p.id === selectedProviderId);
   const models = useAIModels(selectedProviderId || undefined);
 
@@ -142,11 +143,19 @@ export function ChatPanel() {
     }
   }, [isOpen]);
 
-  // Auto-select latest conversation when panel opens with none selected
+  // Auto-select latest conversation when panel opens with none selected.
+  // Only triggers on isOpen change (not when user clears via "new conversation").
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen && !activeConversationId && conversations?.length) {
+    if (
+      isOpen &&
+      !prevIsOpenRef.current &&
+      !activeConversationId &&
+      conversations?.length
+    ) {
       setActiveConversation(conversations[0].id);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, activeConversationId, conversations, setActiveConversation]);
 
   // Keyboard shortcut: Cmd+. to toggle
@@ -246,7 +255,7 @@ export function ChatPanel() {
           messages: history,
           temperature,
           abortSignal: controller.signal,
-          ...(tools ? { tools, stopWhen: stepCountIs(3) } : {}),
+          ...(tools ? { tools, stopWhen: stepCountIs(maxToolSteps) } : {}),
         });
 
         let rawContent = "";
@@ -286,9 +295,7 @@ export function ChatPanel() {
             });
           }
           // Append in-progress text from the current step
-          const trailingText = lastParsedContent.slice(
-            lastCommittedParsedLen,
-          );
+          const trailingText = lastParsedContent.slice(lastCommittedParsedLen);
           if (trailingText) {
             snapshot.push({ type: "text", content: trailingText });
           }
@@ -335,10 +342,20 @@ export function ChatPanel() {
             continue;
           } else if (part.type === "finish-step") {
             finishReason = part.finishReason;
+            // Re-parse to ensure reasoning state is up-to-date at step boundary
+            const stepParsed = parseThinkingTags(rawContent);
+            lastParsedContent = stepParsed.content;
+            const stepReasoning = apiReasoning
+              ? apiReasoning +
+                (stepParsed.reasoning
+                  ? "\n\n" + stepParsed.reasoning
+                  : "")
+              : stepParsed.reasoning;
+            if (stepReasoning) setStreamingReasoning(stepReasoning);
+            setStreamingContent(stepParsed.content);
+            latestStreamedContent = stepParsed.content;
             // Commit completed step using parsed content boundaries
-            const stepText = lastParsedContent.slice(
-              lastCommittedParsedLen,
-            );
+            const stepText = lastParsedContent.slice(lastCommittedParsedLen);
             if (stepText) {
               committedParts.push({ type: "text", content: stepText });
             }
@@ -538,7 +555,7 @@ export function ChatPanel() {
         abortRef.current = null;
       }
     },
-    [selectedProvider, selectedModelId, systemPrompt, temperature],
+    [selectedProvider, selectedModelId, systemPrompt, temperature, maxToolSteps],
   );
 
   const handleSend = useCallback(async () => {
@@ -636,9 +653,7 @@ export function ChatPanel() {
           ...m,
           ...(streamingContent ? { content: streamingContent } : {}),
           ...(streamingReasoning ? { reasoning: streamingReasoning } : {}),
-          ...(streamingParts.length > 0
-            ? { parts: streamingParts }
-            : {}),
+          ...(streamingParts.length > 0 ? { parts: streamingParts } : {}),
         }
       : m,
   );
@@ -682,8 +697,6 @@ export function ChatPanel() {
         </div>
       </div>
 
-      <NovelContextBadge />
-
       {historyOpen && (
         <ChatHistoryDialog
           open={historyOpen}
@@ -717,6 +730,10 @@ export function ChatPanel() {
           onSystemPromptChange={(p) => updateChatSettings({ systemPrompt: p })}
           temperature={temperature}
           onTemperatureChange={(t) => updateChatSettings({ temperature: t })}
+          maxToolSteps={maxToolSteps}
+          onMaxToolStepsChange={(s) =>
+            updateChatSettings({ maxToolSteps: s })
+          }
         />
       )}
 
@@ -785,6 +802,8 @@ export function ChatPanel() {
         </StickToBottom.Content>
         <ScrollToBottom />
       </StickToBottom>
+
+      <NovelContextBadge />
 
       {/* Input */}
       <div className="shrink-0 border-t p-3">

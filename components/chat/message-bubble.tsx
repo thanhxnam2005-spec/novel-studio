@@ -11,16 +11,16 @@ import {
   ChevronUp,
   CopyIcon,
   DownloadIcon,
-  LoaderIcon,
   PencilIcon,
   RefreshCwIcon,
-  WrenchIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
 import { useStickToBottom } from "use-stick-to-bottom";
+import { BrainIcon } from "../ui/brain";
+import { WrenchIcon } from "../ui/wrench";
 import { chatStreamdownComponents } from "./streamdown-components";
 
 const TOOL_LABELS: Record<string, string> = {
@@ -59,13 +59,6 @@ function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
       >
         <BookSearchIcon className="size-3 shrink-0" />
         <span className="flex-1 truncate font-medium">{label}</span>
-        {hasArgs && (
-          <span className="max-w-[40%] shrink-0 truncate text-muted-foreground/70">
-            {Object.entries(toolCall.args)
-              .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-              .join(", ")}
-          </span>
-        )}
         {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
       {open && (
@@ -84,7 +77,7 @@ function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
               Kết quả
             </span>
-            <pre className="mt-0.5 max-h-48 overflow-y-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed">
+            <pre className="mt-0.5 max-h-48 whitespace-pre-wrap break-all text-[10px] leading-relaxed">
               {formatResultPreview(toolCall.result)}
             </pre>
           </div>
@@ -114,16 +107,14 @@ function ToolCallsGroup({
         onClick={() => setOpen(!open)}
         className="mb-0.5 flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted"
       >
-        <WrenchIcon
-          className={cn("size-3", isLoading && "animate-spin")}
-        />
+        <WrenchIcon autoAnimate={isLoading} className="size-3" />
         {isLoading
           ? "Đang tra cứu..."
           : `Đã sử dụng ${toolCalls.length} công cụ`}
         {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       </button>
       {open && (
-        <div className="mb-1 space-y-1">
+        <div className="mb-1 space-y-1 ml-4">
           {toolCalls.map((tc, i) => (
             <ToolCallItem key={i} toolCall={tc} />
           ))}
@@ -162,9 +153,8 @@ export function MessageBubble({
     useStickToBottom();
   const hasReasoning = !!message.reasoning;
   const hasParts = !!message.parts?.length;
-  // Auto-open while streaming thinking, otherwise respect manual toggle
-  const reasoningOpen =
-    (isStreaming && hasReasoning && !message.content) || reasoningOpenManual;
+  // Auto-open while streaming (stays open through tool calls), manual toggle after
+  const reasoningOpen = (isStreaming && hasReasoning) || reasoningOpenManual;
 
   function startEdit() {
     setEditText(message.content);
@@ -211,11 +201,7 @@ export function MessageBubble({
   }
 
   /** Render assistant content as a text bubble */
-  const renderTextBubble = (
-    text: string,
-    streaming: boolean,
-    key?: string,
-  ) => {
+  const renderTextBubble = (text: string, streaming: boolean, key?: string) => {
     if (!text) return null;
     return (
       <div
@@ -256,8 +242,8 @@ export function MessageBubble({
     return message.parts.map((part, idx) => {
       if (part.type === "tool-calls") {
         // Check if there's text content after this tool-calls group
-        const hasContentAfter = message.parts!
-          .slice(idx + 1)
+        const hasContentAfter = message
+          .parts!.slice(idx + 1)
           .some((p) => p.type === "text" && p.content.trim());
 
         return (
@@ -274,8 +260,9 @@ export function MessageBubble({
       if (!part.content.trim()) return null;
 
       // Check if this is the last text part (for streaming mode)
-      const isLastTextPart =
-        !message.parts!.slice(idx + 1).some((p) => p.type === "text");
+      const isLastTextPart = !message
+        .parts!.slice(idx + 1)
+        .some((p) => p.type === "text");
 
       return renderTextBubble(
         isError
@@ -306,11 +293,9 @@ export function MessageBubble({
             onClick={() => setReasoningOpen(!reasoningOpen)}
             className="mb-1 flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted"
           >
-            <LoaderIcon
-              className={cn(
-                "size-3",
-                isStreaming && !message.content && "animate-spin",
-              )}
+            <BrainIcon
+              autoAnimate={isStreaming && !message.content}
+              className="size-3"
             />
             {isStreaming && !message.content
               ? "Đang suy nghĩ..."

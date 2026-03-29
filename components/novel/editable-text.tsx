@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CheckIcon, PencilLineIcon, XIcon } from "lucide-react";
+import { useState } from "react";
 
 export function EditableText({
   value,
@@ -52,14 +52,16 @@ export function EditableText({
             if (e.key === "Enter" && !multiline) handleSave();
             if (e.key === "Escape") handleCancel();
           }}
-          className={multiline ? "min-h-[80px] text-sm" : "text-sm"}
+          className={`focus-visible:ring-0 ${multiline ? "flex-1 min-h-[80px] text-sm" : "text-sm"}`}
         />
-        <Button variant="ghost" size="icon-sm" onClick={handleSave}>
-          <CheckIcon className="size-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleCancel}>
-          <XIcon className="size-3.5" />
-        </Button>
+        <div className={`flex ${multiline ? "flex-col" : "flex-row"}`}>
+          <Button variant="ghost" size="icon-sm" onClick={handleSave}>
+            <CheckIcon className="size-3.5 text-green-500" />
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={handleCancel}>
+            <XIcon className="size-3.5 text-red-500" />
+          </Button>
+        </div>
       </div>
     );
   }
@@ -69,10 +71,16 @@ export function EditableText({
       className={`group flex cursor-pointer items-start gap-1.5 ${className}`}
       onClick={() => setEditing(true)}
     >
-      <span className={value ? displayClassName : `${displayClassName} text-muted-foreground italic`}>
+      <span
+        className={
+          value
+            ? displayClassName
+            : `${displayClassName} text-muted-foreground italic`
+        }
+      >
         {value || placeholder}
       </span>
-      <PencilIcon className="mt-0.5 size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-40" />
+      <PencilLineIcon className="mt-1.25 size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-40" />
     </div>
   );
 }
