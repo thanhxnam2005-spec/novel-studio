@@ -53,6 +53,7 @@ export interface Chapter {
 export type SceneVersionType =
   | "ai-translate"
   | "ai-edit"
+  | "ai-write"
   | "manual"
   | "qt-convert"
   | "find-replace";
@@ -341,6 +342,125 @@ export interface TTSSettings {
   providerApiKeys?: Record<string, string>;
 }
 
+// ─── Writing Pipeline ───────────────────────────────────────
+
+export interface PlotPoint {
+  id: string;
+  title: string;
+  description: string;
+  chapterOrder?: number;
+  status: "planned" | "in-progress" | "resolved";
+}
+
+export interface PlotArc {
+  id: string;
+  novelId: string;
+  title: string;
+  description: string;
+  type: "main" | "subplot" | "character";
+  plotPoints: PlotPoint[];
+  status: "active" | "completed" | "abandoned";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChapterPlanScene {
+  title: string;
+  summary: string;
+  characters: string[];
+  location?: string;
+  mood?: string;
+}
+
+export interface ChapterPlan {
+  id: string;
+  novelId: string;
+  chapterOrder: number;
+  title?: string;
+  directions: string[];
+  outline: string;
+  scenes: ChapterPlanScene[];
+  status: "planned" | "writing" | "written" | "reviewed" | "saved";
+  chapterId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CharacterDevelopment {
+  chapterOrder: number;
+  description: string;
+}
+
+export interface CharacterArc {
+  id: string;
+  novelId: string;
+  characterId: string;
+  trajectory: string;
+  developments: CharacterDevelopment[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type WritingAgentRole =
+  | "context"
+  | "direction"
+  | "outline"
+  | "writer"
+  | "review"
+  | "rewrite";
+
+export type WritingStepStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "editing"
+  | "skipped"
+  | "error";
+
+/** Per-novel writing pipeline configuration. id === novelId. */
+export interface WritingSettings {
+  id: string;
+  chapterLength: number;
+  contextModel?: StepModelConfig;
+  directionModel?: StepModelConfig;
+  outlineModel?: StepModelConfig;
+  writerModel?: StepModelConfig;
+  reviewModel?: StepModelConfig;
+  rewriteModel?: StepModelConfig;
+  contextPrompt?: string;
+  directionPrompt?: string;
+  outlinePrompt?: string;
+  writerPrompt?: string;
+  reviewPrompt?: string;
+  rewritePrompt?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WritingSession {
+  id: string;
+  novelId: string;
+  chapterPlanId: string;
+  currentStep: WritingAgentRole;
+  status: "active" | "paused" | "completed" | "error";
+  contextHash?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WritingStepResult {
+  id: string;
+  sessionId: string;
+  role: WritingAgentRole;
+  status: WritingStepStatus;
+  output?: string;
+  error?: string;
+  startedAt?: Date;
+  completedAt?: Date;
+}
+
+// ─── Database ────────────────────────────────────────────────
+
 export class NovelStudioDB extends Dexie {
   novels!: EntityTable<Novel, "id">;
   chapters!: EntityTable<Chapter, "id">;
@@ -362,6 +482,12 @@ export class NovelStudioDB extends Dexie {
   convertSettings!: EntityTable<ConvertSettings, "id">;
   nameFrequency!: EntityTable<NameFrequency, "id">;
   ttsSettings!: EntityTable<TTSSettings, "id">;
+  plotArcs!: EntityTable<PlotArc, "id">;
+  chapterPlans!: EntityTable<ChapterPlan, "id">;
+  characterArcs!: EntityTable<CharacterArc, "id">;
+  writingSettings!: EntityTable<WritingSettings, "id">;
+  writingSessions!: EntityTable<WritingSession, "id">;
+  writingStepResults!: EntityTable<WritingStepResult, "id">;
 
   constructor() {
     super("novel-studio");

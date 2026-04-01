@@ -117,4 +117,16 @@ export function registerMigrations(db: NovelStudioDB) {
   db.version(8).stores({
     ttsSettings: "id",
   });
+
+  // v9: Add writing pipeline tables
+  db.version(9).stores({
+    plotArcs: "id, novelId, type, status, [novelId+type], createdAt",
+    chapterPlans:
+      "id, novelId, chapterOrder, status, [novelId+chapterOrder], createdAt",
+    characterArcs: "id, novelId, characterId, [novelId+characterId], createdAt",
+    writingSettings: "id",
+    writingSessions:
+      "id, novelId, chapterPlanId, status, [novelId+status], createdAt",
+    writingStepResults: "id, sessionId, role, [sessionId+role]",
+  });
 }

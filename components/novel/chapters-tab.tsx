@@ -173,8 +173,8 @@ export function ChaptersTab({
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <WrenchIcon className="size-3.5 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Xử lý</span>
-                  ({selected.size})
+                  <span className="hidden sm:inline">Xử lý</span>(
+                  {selected.size})
                   <ChevronDownIcon className="ml-1 size-3" />
                 </Button>
               </PopoverTrigger>
@@ -222,7 +222,9 @@ export function ChaptersTab({
               title={`Phân tích còn lại (${needsAnalysisCount})`}
             >
               <SearchIcon className="size-3.5 sm:mr-1.5" />
-              <span className="hidden sm:inline">Phân tích còn lại ({needsAnalysisCount})</span>
+              <span className="hidden sm:inline">
+                Phân tích còn lại ({needsAnalysisCount})
+              </span>
               <span className="sm:hidden">{needsAnalysisCount}</span>
             </Button>
           )}
@@ -255,8 +257,12 @@ export function ChaptersTab({
             <span className="w-8 shrink-0">#</span>
             <span className="min-w-0 flex-1">Tiêu đề</span>
             <span className="w-14 shrink-0 text-right">Số từ</span>
-            <span className="hidden w-20 shrink-0 text-right lg:block">Chỉnh sửa</span>
-            <span className="hidden w-20 shrink-0 text-right lg:block">Phân tích</span>
+            <span className="hidden w-20 shrink-0 text-right lg:block">
+              Chỉnh sửa
+            </span>
+            <span className="hidden w-20 shrink-0 text-right lg:block">
+              Phân tích
+            </span>
             <span className="w-6 shrink-0 lg:hidden" />
             <span className="w-[4.5rem] shrink-0" />
           </div>
@@ -276,7 +282,12 @@ export function ChaptersTab({
                     tabIndex={0}
                     className="flex w-full cursor-pointer items-center gap-2 px-3 pt-2 pb-1 text-left"
                     onClick={() => setExpandedId(isExpanded ? null : ch.id)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(isExpanded ? null : ch.id); } }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setExpandedId(isExpanded ? null : ch.id);
+                      }
+                    }}
                   >
                     <Checkbox
                       checked={selected.has(ch.id)}
@@ -285,7 +296,7 @@ export function ChaptersTab({
                       className="size-3.5 shrink-0"
                     />
                     <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">
-                      {ch.order + 1}
+                      {ch.order}
                     </span>
                     {isExpanded ? (
                       <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -335,7 +346,7 @@ export function ChaptersTab({
                     className="size-3.5 shrink-0"
                   />
                   <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">
-                    {ch.order + 1}
+                    {ch.order}
                   </span>
                   <button
                     className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm"

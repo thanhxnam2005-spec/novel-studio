@@ -65,6 +65,57 @@ export const CATEGORY_META: Record<
 
 export const changelog: ChangelogRelease[] = [
   {
+    version: "0.10.0",
+    date: "2026-04-02",
+    title: "Viết truyện tự động với AI",
+    summary:
+      "Tính năng Auto-Write cho phép AI viết truyện theo từng bước: xây dựng thế giới quan, nhân vật, mạch truyện, rồi viết từng chương qua pipeline 5 bước với khả năng tùy biến tối đa.",
+    changes: [
+      {
+        category: "feature",
+        description: "Auto-Write — viết truyện tự động theo pipeline",
+        details:
+          "Pipeline 5 bước cho mỗi chương: Bối cảnh, Hướng đi, Giàn ý, Viết và Đánh giá. Người dùng can thiệp ở mọi bước.",
+        tags: ["viết truyện", "AI", "pipeline"],
+      },
+      {
+        category: "feature",
+        description: "Setup Wizard — xây dựng bộ khung truyện",
+        details:
+          "Tạo thế giới quan, nhân vật, mạch truyện và kế hoạch chương từ ý tưởng ban đầu. 4 bước với AI tự động generate, cho phép chỉnh sửa trực tiếp kết quả và tùy chỉnh prompt/model cho từng bước.",
+        tags: ["viết truyện", "setup", "world-building"],
+      },
+      {
+        category: "feature",
+        description: "Viết lại chương dựa trên đánh giá",
+        details:
+          "Sau khi AI đánh giá chương, có thể yêu cầu viết lại để khắc phục các vấn đề. So sánh bản gốc và bản viết lại bằng inline diff viewer.",
+        tags: ["viết truyện", "review", "rewrite"],
+      },
+      {
+        category: "feature",
+        description: "Cài đặt riêng cho từng agent",
+        details:
+          "Chọn model AI và tùy chỉnh system prompt cho từng bước trong pipeline (Bối cảnh, Hướng đi, Giàn ý, Viết, Đánh giá, Viết lại). Prompt mặc định theo phong cách tiểu thuyết mạng Trung Quốc.",
+        tags: ["viết truyện", "cài đặt"],
+      },
+      {
+        category: "feature",
+        description: "Smart Dashboard cho truyện đã có dữ liệu",
+        details:
+          "Khi mở Auto-Write cho truyện đã có chapters/characters, hiển thị dashboard thông minh với 3 lựa chọn: tự động tạo mạch truyện từ dữ liệu, setup thủ công, hoặc viết tự do.",
+        tags: ["viết truyện", "dashboard"],
+      },
+      {
+        category: "feature",
+        description: "Tự động tạo thêm kế hoạch chương",
+        details:
+          "Khi viết xong 70%+ kế hoạch chương hiện tại, có thể tạo thêm kế hoạch cho các chương tiếp theo. AI đọc nội dung đã viết để đảm bảo liên tục.",
+        tags: ["viết truyện", "chapter plans"],
+      },
+    ],
+  },
+  {
     version: "0.9.0",
     date: "2026-03-31",
     title: "Đọc truyện bằng giọng nói",

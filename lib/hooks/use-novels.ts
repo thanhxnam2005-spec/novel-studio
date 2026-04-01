@@ -35,11 +35,32 @@ export async function updateNovel(
 }
 
 export async function deleteNovel(id: string) {
-  await db.transaction("rw", [db.novels, db.chapters, db.scenes, db.characters, db.notes], async () => {
-    await db.scenes.where("novelId").equals(id).delete();
-    await db.chapters.where("novelId").equals(id).delete();
-    await db.characters.where("novelId").equals(id).delete();
-    await db.notes.where("novelId").equals(id).delete();
-    await db.novels.delete(id);
-  });
+  await db.transaction(
+    "rw",
+    [
+      db.novels, db.chapters, db.scenes, db.characters, db.notes,
+      db.plotArcs, db.chapterPlans, db.characterArcs,
+      db.writingSettings, db.writingSessions, db.writingStepResults,
+    ],
+    async () => {
+      await db.scenes.where("novelId").equals(id).delete();
+      await db.chapters.where("novelId").equals(id).delete();
+      await db.characters.where("novelId").equals(id).delete();
+      await db.notes.where("novelId").equals(id).delete();
+      // Writing pipeline tables
+      await db.plotArcs.where("novelId").equals(id).delete();
+      await db.chapterPlans.where("novelId").equals(id).delete();
+      await db.characterArcs.where("novelId").equals(id).delete();
+      await db.writingSettings.delete(id);
+      const sessions = await db.writingSessions
+        .where("novelId")
+        .equals(id)
+        .toArray();
+      for (const s of sessions) {
+        await db.writingStepResults.where("sessionId").equals(s.id).delete();
+      }
+      await db.writingSessions.where("novelId").equals(id).delete();
+      await db.novels.delete(id);
+    },
+  );
 }

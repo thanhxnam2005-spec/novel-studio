@@ -1,8 +1,16 @@
 {
   "announcements": [
     {
-      "id": "tts-feature-2026-03-31",
+      "id": "auto-write-feature-2026-04-02",
       "enabled": true,
+      "type": "info",
+      "content": "v0.10.0 - Tính năng mới: **Viết truyện tự động với AI** — pipeline 5 bước từ bối cảnh đến đánh giá, tùy biến model và prompt cho từng bước. [Xem chi tiết](/changelog)",
+      "bgColor": "bg-rose-500/10 dark:bg-rose-500/15",
+      "textColor": "text-rose-700 dark:text-rose-300"
+    },
+    {
+      "id": "tts-feature-2026-03-31",
+      "enabled": false,
       "type": "info",
       "content": "v0.9.0 - Tính năng mới: **Đọc truyện bằng giọng nói** — nghe đọc ngay trong trang đọc với 6 nhà cung cấp giọng nói. [Xem chi tiết](/changelog)",
       "bgColor": "bg-violet-500/10 dark:bg-violet-500/15",

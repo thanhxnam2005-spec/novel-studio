@@ -1,13 +1,13 @@
 "use client";
 
 import { AnalysisDialog } from "@/components/analysis-dialog";
-import { BulkConvertDialog } from "@/components/novel/bulk-convert-dialog";
-import { BulkReplaceDialog } from "@/components/novel/bulk-replace-dialog";
 import { BulkTranslateDialog } from "@/components/bulk-translate-dialog";
 import { EditNovelDialog } from "@/components/edit-novel-dialog";
-import { EditableText } from "@/components/novel/editable-text";
+import { BulkConvertDialog } from "@/components/novel/bulk-convert-dialog";
+import { BulkReplaceDialog } from "@/components/novel/bulk-replace-dialog";
 import { ChaptersTab } from "@/components/novel/chapters-tab";
 import { CharactersTab } from "@/components/novel/characters-tab";
+import { EditableText } from "@/components/novel/editable-text";
 import { WorldBuildingTab } from "@/components/novel/world-building-tab";
 import {
   AlertDialog,
@@ -22,12 +22,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   deleteNovel,
   updateNovel,
@@ -37,17 +37,23 @@ import {
   useNovel,
   useNovelScenes,
 } from "@/lib/hooks";
-import { exportNovel, downloadNovelJson } from "@/lib/novel-io";
+import { downloadNovelJson, exportNovel } from "@/lib/novel-io";
 import {
   DownloadIcon,
   ExternalLinkIcon,
   GlobeIcon,
   PencilIcon,
   ScrollTextIcon,
+  SparklesIcon,
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -209,6 +215,19 @@ export default function NovelDetailPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  size="sm"
+                  onClick={() => router.push(`/novels/${id}/auto-write`)}
+                  className="relative bg-linear-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-700 hover:via-pink-700 hover:to-red-700 text-white font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/50 hover:animate-none"
+                >
+                  <SparklesIcon className="size-3 mr-1 animate-pulse" />
+                  Viết AI
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Viết truyện tự động</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setEditOpen(true)}
@@ -291,7 +310,10 @@ export default function NovelDetailPage() {
         }}
       >
         <TabsList className="w-full justify-center gap-1 p-1">
-          <TabsTrigger value="chapters" className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3">
+          <TabsTrigger
+            value="chapters"
+            className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3"
+          >
             <ScrollTextIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">Chương</span>
             {chapters && chapters.length > 0 && (
@@ -306,11 +328,17 @@ export default function NovelDetailPage() {
               />
             )}
           </TabsTrigger>
-          <TabsTrigger value="world-building" className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3">
+          <TabsTrigger
+            value="world-building"
+            className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3"
+          >
             <GlobeIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
             <span className="hidden sm:inline">Thế giới quan</span>
           </TabsTrigger>
-          <TabsTrigger value="characters" className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3">
+          <TabsTrigger
+            value="characters"
+            className="gap-1.5 px-2 py-1.5 sm:gap-2 sm:px-3"
+          >
             <UsersIcon className="size-3.5 text-violet-600 dark:text-violet-400" />
             <span className="hidden sm:inline">Nhân vật</span>
             {characters && characters.length > 0 && (

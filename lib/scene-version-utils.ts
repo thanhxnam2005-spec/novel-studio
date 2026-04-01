@@ -3,6 +3,7 @@ import type { SceneVersionType } from "@/lib/db";
 export const VERSION_TYPE_LABELS: Record<SceneVersionType, string> = {
   "ai-translate": "Dịch AI",
   "ai-edit": "Sửa AI",
+  "ai-write": "Viết AI",
   manual: "Thủ công",
   "qt-convert": "Convert QT",
   "find-replace": "Thay thế",
@@ -14,6 +15,7 @@ export const VERSION_TYPE_VARIANTS: Record<
 > = {
   "ai-translate": "default",
   "ai-edit": "secondary",
+  "ai-write": "default",
   manual: "outline",
   "qt-convert": "secondary",
   "find-replace": "secondary",

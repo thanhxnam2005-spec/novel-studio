@@ -55,8 +55,13 @@ function getFailedGeneration(err: unknown): string | null {
   const cause = anyErr.cause;
   if (cause?.error?.failed_generation) return cause.error.failed_generation;
   // Check if the message itself contains it (some wrappers stringify)
-  if (typeof err.message === "string" && err.message.includes("failed_generation")) {
-    const match = err.message.match(/"failed_generation"\s*:\s*"([\s\S]*?)(?:"|$)/);
+  if (
+    typeof err.message === "string" &&
+    err.message.includes("failed_generation")
+  ) {
+    const match = err.message.match(
+      /"failed_generation"\s*:\s*"([\s\S]*?)(?:"|$)/,
+    );
     if (match) return match[1];
   }
   return null;
@@ -137,6 +142,6 @@ export async function generateStructured<T>({
 
   // Empty response = content likely filtered/prohibited by provider
   throw new Error(
-    "Nhà cung cấp AI trả về nội dung trống — có thể nội dung đã bị chặn bởi bộ lọc an toàn. Hãy thử chỉnh sửa prompt tùy chỉnh, Chỉ thị chung, hoặc đổi mô hình AI khác.",
+    "Nhà cung cấp AI trả về nội dung trống. Hãy thử chạy lại, chỉnh sửa prompt tùy chỉnh, Chỉ thị chung, hoặc đổi mô hình AI khác.",
   );
 }
