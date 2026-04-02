@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -98,6 +98,21 @@ export default function ReadingView() {
     useReaderPanel.getState().stop();
     setCurrentIndex(newIndex);
   }, []);
+
+  // Register auto-advance callback: when TTS finishes, move to next chapter and continue reading
+  useEffect(() => {
+    if (hasNext) {
+      useReaderPanel.getState().setOnFinishChapter(() => {
+        useReaderPanel.getState().setAutoPlayOnLoad(true);
+        handleChapterChange(clampedIndex + 1);
+      });
+    } else {
+      useReaderPanel.getState().setOnFinishChapter(undefined);
+    }
+    return () => {
+      useReaderPanel.getState().setOnFinishChapter(undefined);
+    };
+  }, [hasNext, clampedIndex, handleChapterChange]);
 
   if (novel === undefined || !chapters) {
     return (

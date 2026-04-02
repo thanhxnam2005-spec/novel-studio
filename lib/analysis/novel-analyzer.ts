@@ -160,12 +160,19 @@ export async function analyzeNovel({
     }
   } else {
     // Phase 1: normal execution
+    const allActiveScenes = await db.scenes
+      .where("[novelId+isActive]")
+      .equals([novelId, 1])
+      .sortBy("order");
+    const scenesByChapterId = new Map<string, typeof allActiveScenes>();
+    for (const scene of allActiveScenes) {
+      const group = scenesByChapterId.get(scene.chapterId) ?? [];
+      group.push(scene);
+      scenesByChapterId.set(scene.chapterId, group);
+    }
     const chapterContents: BatchItem[] = [];
     for (const { item: chapter, originalIndex } of sampled) {
-      const scenes = await db.scenes
-        .where("[chapterId+isActive]")
-        .equals([chapter.id, 1])
-        .sortBy("order");
+      const scenes = scenesByChapterId.get(chapter.id) ?? [];
       const content = scenes.map((s) => s.content).join("\n\n");
       chapterContents.push({
         chapterIndex: originalIndex,
@@ -247,10 +254,6 @@ export async function analyzeNovel({
             chaptersCompleted,
             totalChapters,
           });
-          await db.novels.update(novelId, {
-            chaptersAnalyzed: chaptersCompleted,
-            updatedAt: new Date(),
-          });
         }
       } catch (err) {
         // Re-throw abort errors so the entire analysis stops
@@ -285,6 +288,10 @@ export async function analyzeNovel({
     });
 
     await runWithConcurrency(batchTasks, CONCURRENCY_LIMIT);
+    await db.novels.update(novelId, {
+      chaptersAnalyzed: chaptersCompleted,
+      updatedAt: new Date(),
+    });
 
     // Report Phase 1 result
     const chapterErrors = errors.filter((e) => e.phase === "chapters");
@@ -435,6 +442,13 @@ export async function analyzeNovel({
       );
 
       if (characterMap.size > 0) {
+        const existingCharacters = await db.characters
+          .where("novelId")
+          .equals(novelId)
+          .toArray();
+        const characterByNormalizedName = new Map(
+          existingCharacters.map((c) => [c.name.toLowerCase().trim(), c]),
+        );
         const nameKeyMap = new Map<string, string>();
         for (const cr of chapterResults) {
           for (const char of cr.result.characters) {
@@ -463,15 +477,8 @@ export async function analyzeNovel({
 
         const now = new Date();
         for (const profile of profiling.object.characters) {
-          const existing = await db.characters
-            .where("novelId")
-            .equals(novelId)
-            .filter(
-              (c) =>
-                c.name.toLowerCase().trim() ===
-                profile.name.toLowerCase().trim(),
-            )
-            .first();
+          const normalizedName = profile.name.toLowerCase().trim();
+          const existing = characterByNormalizedName.get(normalizedName);
 
           const charData = {
             role: profile.role,
@@ -495,9 +502,22 @@ export async function analyzeNovel({
               ...charData,
               updatedAt: now,
             });
+            characterByNormalizedName.set(normalizedName, {
+              ...existing,
+              ...charData,
+            });
           } else {
+            const newId = crypto.randomUUID();
             await db.characters.add({
-              id: crypto.randomUUID(),
+              id: newId,
+              novelId,
+              name: profile.name,
+              ...charData,
+              createdAt: now,
+              updatedAt: now,
+            });
+            characterByNormalizedName.set(normalizedName, {
+              id: newId,
               novelId,
               name: profile.name,
               ...charData,
@@ -518,18 +538,22 @@ export async function analyzeNovel({
 
       // Link characters to chapters (best-effort — non-critical metadata)
       try {
+        const allCharacters = await db.characters
+          .where("novelId")
+          .equals(novelId)
+          .toArray();
+        const characterIdByNormalizedName = new Map(
+          allCharacters.map((c) => [c.name.toLowerCase().trim(), c.id]),
+        );
         await Promise.all(
           chapterResults.map(async (cr) => {
-            const charNames = cr.result.characters.map((c) =>
-              c.name.toLowerCase().trim(),
-            );
-            const charRecords = await db.characters
-              .where("novelId")
-              .equals(novelId)
-              .filter((c) => charNames.includes(c.name.toLowerCase().trim()))
-              .toArray();
+            const charIds = cr.result.characters
+              .map((c) =>
+                characterIdByNormalizedName.get(c.name.toLowerCase().trim()),
+              )
+              .filter((id): id is string => id !== undefined);
             await db.chapters.update(cr.chapterId, {
-              characterIds: charRecords.map((c) => c.id),
+              characterIds: charIds,
               updatedAt: new Date(),
             });
           }),

@@ -99,8 +99,14 @@ interface ReaderPanelState {
   currentSentenceIndex: number;
   sentences: Sentence[];
 
+  // When true, play() is triggered automatically on the next setSentences call
+  autoPlayOnLoad: boolean;
+
   // TTS settings snapshot (synced from Dexie by the UI)
   ttsSettings: TTSSettings;
+
+  // Callback invoked when TTS finishes the current content (e.g. to auto-advance chapter)
+  onFinishChapter?: () => void;
 
   // Actions
   toggle: () => void;
@@ -115,6 +121,8 @@ interface ReaderPanelState {
   syncSettings: (settings: TTSSettings) => void;
   updateSettings: (partial: Partial<Omit<TTSSettings, "id">>) => void;
   setPanelWidth: (width: number) => void;
+  setOnFinishChapter: (fn: (() => void) | undefined) => void;
+  setAutoPlayOnLoad: (value: boolean) => void;
 }
 
 const DEFAULT_TTS: TTSSettings = {
@@ -136,6 +144,7 @@ export const useReaderPanel = create<ReaderPanelState>((set, get) => ({
   isLoading: false,
   currentSentenceIndex: 0,
   sentences: [],
+  autoPlayOnLoad: false,
   ttsSettings: DEFAULT_TTS,
 
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
@@ -170,6 +179,7 @@ export const useReaderPanel = create<ReaderPanelState>((set, get) => ({
       },
       onFinish: () => {
         set({ isPlaying: false, isPaused: false, isLoading: false, currentSentenceIndex: 0 });
+        get().onFinishChapter?.();
       },
       onError: (err) => {
         console.error("[TTS] Playback error:", err);
@@ -206,7 +216,13 @@ export const useReaderPanel = create<ReaderPanelState>((set, get) => ({
     }
   },
 
-  setSentences: (sentences) => set({ sentences, currentSentenceIndex: 0 }),
+  setSentences: (sentences) => {
+    set({ sentences, currentSentenceIndex: 0 });
+    if (get().autoPlayOnLoad) {
+      set({ autoPlayOnLoad: false });
+      get().play();
+    }
+  },
 
   setCurrentSentenceIndex: (index) => set({ currentSentenceIndex: index }),
 
@@ -224,6 +240,10 @@ export const useReaderPanel = create<ReaderPanelState>((set, get) => ({
       configurePlayer(player, next);
     }
   },
+
+  setOnFinishChapter: (fn) => set({ onFinishChapter: fn }),
+
+  setAutoPlayOnLoad: (value) => set({ autoPlayOnLoad: value }),
 
   setPanelWidth: (width) => {
     const clamped = Math.max(

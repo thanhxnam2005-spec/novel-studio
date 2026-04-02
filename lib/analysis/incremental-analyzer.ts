@@ -197,15 +197,25 @@ export async function analyzeNovelIncremental({
       phaseResult: { phase: "chapters", result: "done" },
     });
   } else {
+    const allActiveScenes = await db.scenes
+      .where("[novelId+isActive]")
+      .equals([novelId, 1])
+      .sortBy("order");
+    const scenesByChapterId = new Map<string, typeof allActiveScenes>();
+    for (const scene of allActiveScenes) {
+      const group = scenesByChapterId.get(scene.chapterId) ?? [];
+      group.push(scene);
+      scenesByChapterId.set(scene.chapterId, group);
+    }
+    const chapterIndexById = new Map(allChapters.map((c, i) => [c.id, i]));
     const chapterContents: BatchItem[] = [];
     for (const chapter of needsAnalysis) {
-      const scenes = await db.scenes
-        .where("[chapterId+isActive]")
-        .equals([chapter.id, 1])
-        .sortBy("order");
+      const scenes = scenesByChapterId.get(chapter.id) ?? [];
       const content = scenes.map((s) => s.content).join("\n\n");
+      const chapterIndex = chapterIndexById.get(chapter.id);
+      if (chapterIndex === undefined) continue;
       chapterContents.push({
-        chapterIndex: allChapters.findIndex((c) => c.id === chapter.id),
+        chapterIndex,
         title: chapter.title,
         content,
         tokens: estimateTokens(content),
@@ -283,10 +293,6 @@ export async function analyzeNovelIncremental({
             chaptersCompleted,
             totalChapters: totalToAnalyze,
           });
-          await db.novels.update(novelId, {
-            chaptersAnalyzed: chaptersCompleted,
-            updatedAt: new Date(),
-          });
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") throw err;
@@ -318,6 +324,10 @@ export async function analyzeNovelIncremental({
     });
 
     await runWithConcurrency(batchTasks, CONCURRENCY_LIMIT);
+    await db.novels.update(novelId, {
+      chaptersAnalyzed: chaptersCompleted,
+      updatedAt: new Date(),
+    });
     summary.chaptersAnalyzed = newChapterResults.length;
 
     // Report Phase 1 result
@@ -411,61 +421,80 @@ Dựa trên các chương mới, hãy gọi các công cụ phù hợp để c�
         abortSignal: signal,
       });
 
-      // Apply aggregation tool calls — batch DB reads
+      // Apply aggregation tool calls in-memory, then persist once.
+      let synopsis = currentNovel?.synopsis ?? "";
+      let genres = currentNovel?.genres ?? [];
+      let tags = currentNovel?.tags ?? [];
+      let worldOverview = currentNovel?.worldOverview ?? "";
+      let powerSystem = currentNovel?.powerSystem;
+      let storySetting = currentNovel?.storySetting ?? "";
+      let timePeriod = currentNovel?.timePeriod;
+      let worldRules = currentNovel?.worldRules;
+      let technologyLevel = currentNovel?.technologyLevel;
+      let factions = currentNovel?.factions ?? [];
+      let keyLocations = currentNovel?.keyLocations ?? [];
+
       for (const step of aggregationResult.steps) {
         for (const tc of step.toolCalls as any[]) {
           const input = (tc as any).input;
           switch (tc.toolName) {
             case "update_synopsis":
-              await db.novels.update(novelId, { synopsis: input.synopsis, updatedAt: new Date() });
+              synopsis = input.synopsis;
               summary.updatedFields.push("Tóm tắt");
               break;
             case "update_genres_tags":
-              await db.novels.update(novelId, { genres: input.genres, tags: input.tags, updatedAt: new Date() });
+              genres = input.genres;
+              tags = input.tags;
               summary.updatedFields.push("Thể loại & Nhãn");
               break;
             case "update_world_building": {
-              const updates: any = { updatedAt: new Date() };
               const fields: string[] = [];
-              if (input.worldOverview !== undefined) { updates.worldOverview = input.worldOverview; fields.push("Thế giới quan"); }
-              if (input.powerSystem !== undefined) { updates.powerSystem = input.powerSystem ?? undefined; fields.push("Hệ thống sức mạnh"); }
-              if (input.storySetting !== undefined) { updates.storySetting = input.storySetting; fields.push("Bối cảnh"); }
-              if (input.timePeriod !== undefined) { updates.timePeriod = input.timePeriod ?? undefined; fields.push("Thời kỳ"); }
-              if (input.worldRules !== undefined) { updates.worldRules = input.worldRules ?? undefined; fields.push("Quy luật thế giới"); }
-              if (input.technologyLevel !== undefined) { updates.technologyLevel = input.technologyLevel ?? undefined; fields.push("Công nghệ"); }
-              await db.novels.update(novelId, updates);
+              if (input.worldOverview !== undefined) { worldOverview = input.worldOverview; fields.push("Thế giới quan"); }
+              if (input.powerSystem !== undefined) { powerSystem = input.powerSystem ?? undefined; fields.push("Hệ thống sức mạnh"); }
+              if (input.storySetting !== undefined) { storySetting = input.storySetting; fields.push("Bối cảnh"); }
+              if (input.timePeriod !== undefined) { timePeriod = input.timePeriod ?? undefined; fields.push("Thời kỳ"); }
+              if (input.worldRules !== undefined) { worldRules = input.worldRules ?? undefined; fields.push("Quy luật thế giới"); }
+              if (input.technologyLevel !== undefined) { technologyLevel = input.technologyLevel ?? undefined; fields.push("Công nghệ"); }
               summary.updatedFields.push(...fields);
               break;
             }
             case "add_faction": {
-              const n = await db.novels.get(novelId);
-              await db.novels.update(novelId, { factions: [...(n?.factions ?? []), input], updatedAt: new Date() });
+              factions = [...factions, input];
               summary.factionsAdded++;
               break;
             }
             case "update_faction": {
-              const n = await db.novels.get(novelId);
-              const factions = (n?.factions ?? []).map((f) => f.name.toLowerCase() === input.name.toLowerCase() ? { name: f.name, description: input.description } : f);
-              await db.novels.update(novelId, { factions, updatedAt: new Date() });
+              factions = factions.map((f) => f.name.toLowerCase() === input.name.toLowerCase() ? { name: f.name, description: input.description } : f);
               summary.factionsUpdated++;
               break;
             }
             case "add_location": {
-              const n = await db.novels.get(novelId);
-              await db.novels.update(novelId, { keyLocations: [...(n?.keyLocations ?? []), input], updatedAt: new Date() });
+              keyLocations = [...keyLocations, input];
               summary.locationsAdded++;
               break;
             }
             case "update_location": {
-              const n = await db.novels.get(novelId);
-              const locs = (n?.keyLocations ?? []).map((l) => l.name.toLowerCase() === input.name.toLowerCase() ? { name: l.name, description: input.description } : l);
-              await db.novels.update(novelId, { keyLocations: locs, updatedAt: new Date() });
+              keyLocations = keyLocations.map((l) => l.name.toLowerCase() === input.name.toLowerCase() ? { name: l.name, description: input.description } : l);
               summary.locationsUpdated++;
               break;
             }
           }
         }
       }
+      await db.novels.update(novelId, {
+        synopsis,
+        genres,
+        tags,
+        worldOverview,
+        powerSystem,
+        storySetting,
+        timePeriod,
+        worldRules,
+        technologyLevel,
+        factions,
+        keyLocations,
+        updatedAt: new Date(),
+      });
 
       onProgress?.({
         phase: "aggregation",
@@ -528,6 +557,9 @@ Dựa trên các chương mới, hãy gọi các công cụ phù hợp để c�
       if (characterMap.size > 0) {
         const existingCharacters = await db.characters.where("novelId").equals(novelId).toArray();
         const existingProfilesText = existingCharacters.map((c) => `- **${c.name}** (${c.role}): ${c.description ?? "No description"}`).join("\n");
+        const characterByNormalizedName = new Map(
+          existingCharacters.map((c) => [c.name.toLowerCase().trim(), c]),
+        );
 
         const nameKeyMap = new Map<string, string>();
         for (const cr of newChapterResults) {
@@ -569,10 +601,22 @@ Trả lời bằng Tiếng Việt.`),
             const input = (tc as any).input;
             switch (tc.toolName) {
               case "add_character": {
-                const existing = await db.characters.where("novelId").equals(novelId).filter((c) => c.name.toLowerCase().trim() === input.name.toLowerCase().trim()).first();
+                const normalizedName = input.name.toLowerCase().trim();
+                const existing = characterByNormalizedName.get(normalizedName);
                 if (!existing) {
+                  const newId = crypto.randomUUID();
                   await db.characters.add({
-                    id: crypto.randomUUID(), novelId,
+                    id: newId, novelId,
+                    name: input.name, role: input.role, description: input.description,
+                    age: input.age, sex: input.sex, appearance: input.appearance,
+                    personality: input.personality, hobbies: input.hobbies,
+                    relationshipWithMC: input.relationshipWithMC, relationships: input.relationships,
+                    characterArc: input.characterArc, strengths: input.strengths,
+                    weaknesses: input.weaknesses, motivations: input.motivations, goals: input.goals,
+                    createdAt: ts, updatedAt: ts,
+                  });
+                  characterByNormalizedName.set(normalizedName, {
+                    id: newId, novelId,
                     name: input.name, role: input.role, description: input.description,
                     age: input.age, sex: input.sex, appearance: input.appearance,
                     personality: input.personality, hobbies: input.hobbies,
@@ -586,23 +630,27 @@ Trả lời bằng Tiếng Việt.`),
                 break;
               }
               case "update_character": {
-                const char = await db.characters.where("novelId").equals(novelId).filter((c) => c.name.toLowerCase().trim() === input.name.toLowerCase().trim()).first();
+                const normalizedName = input.name.toLowerCase().trim();
+                const char = characterByNormalizedName.get(normalizedName);
                 if (char) {
                   const { name: _, ...updates } = input;
                   const filtered = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
                   if (Object.keys(filtered).length > 0) {
                     await db.characters.update(char.id, { ...filtered, updatedAt: ts });
+                    characterByNormalizedName.set(normalizedName, { ...char, ...filtered, updatedAt: ts });
                     summary.charactersUpdated++;
                   }
                 }
                 break;
               }
               case "add_relationship": {
-                const char = await db.characters.where("novelId").equals(novelId).filter((c) => c.name.toLowerCase().trim() === input.characterName.toLowerCase().trim()).first();
+                const normalizedName = input.characterName.toLowerCase().trim();
+                const char = characterByNormalizedName.get(normalizedName);
                 if (char) {
                   const rels = [...(char.relationships ?? [])];
                   rels.push({ characterName: input.relatedTo, description: input.description });
                   await db.characters.update(char.id, { relationships: rels, updatedAt: ts });
+                  characterByNormalizedName.set(normalizedName, { ...char, relationships: rels, updatedAt: ts });
                   summary.relationshipsAdded++;
                 }
                 break;
@@ -622,11 +670,16 @@ Trả lời bằng Tiếng Việt.`),
 
       // Link characters to chapters (best-effort — non-critical metadata)
       try {
+        const allCharacters = await db.characters.where("novelId").equals(novelId).toArray();
+        const characterIdByNormalizedName = new Map(
+          allCharacters.map((c) => [c.name.toLowerCase().trim(), c.id]),
+        );
         await Promise.all(
           newChapterResults.map(async (cr) => {
-            const charNames = cr.result.characters.map((c) => c.name.toLowerCase().trim());
-            const charRecords = await db.characters.where("novelId").equals(novelId).filter((c) => charNames.includes(c.name.toLowerCase().trim())).toArray();
-            await db.chapters.update(cr.chapterId, { characterIds: charRecords.map((c) => c.id), updatedAt: new Date() });
+            const charIds = cr.result.characters
+              .map((c) => characterIdByNormalizedName.get(c.name.toLowerCase().trim()))
+              .filter((id): id is string => id !== undefined);
+            await db.chapters.update(cr.chapterId, { characterIds: charIds, updatedAt: new Date() });
           }),
         );
       } catch {
