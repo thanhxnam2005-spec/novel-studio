@@ -25,6 +25,7 @@ import {
   HistoryIcon,
   HomeIcon,
   LibraryIcon,
+  MessageSquareWarningIcon,
   LoaderIcon,
   PenLineIcon,
   ScrollTextIcon,
@@ -55,6 +56,11 @@ export const navConfig = [
 
 export const miscNav = [
   { title: "Nhật ký thay đổi", href: "/changelog", icon: HistoryIcon },
+  {
+    title: "Phản hồi & Báo lỗi",
+    href: "/feedback",
+    icon: MessageSquareWarningIcon,
+  },
 ] as const;
 
 export function AppSidebar() {

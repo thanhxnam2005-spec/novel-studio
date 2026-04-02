@@ -65,6 +65,22 @@ export const CATEGORY_META: Record<
 
 export const changelog: ChangelogRelease[] = [
   {
+    version: "0.10.2",
+    date: "2026-04-04",
+    title: "Trang phản hồi & báo lỗi",
+    summary:
+      "Trang mới cho phép gửi phản hồi và báo lỗi tới kênh hỗ trợ của chúng tôi",
+    changes: [
+      {
+        category: "feature",
+        description: "Trang Phản hồi & báo lỗi (/feedback)",
+        details:
+          "Form gửi loại phản hồi (báo lỗi, góp ý, khác), tiêu đề, mô tả và liên hệ tùy chọn. Gửi trực tiếp và nhanh chóng đến kênh hỗ trợ của chúng tôi.",
+        tags: ["phản hồi"],
+      },
+    ],
+  },
+  {
     version: "0.10.1",
     date: "2026-04-03",
     title: "Nâng cấp đọc truyện & Sửa lỗi chat",
