@@ -64,8 +64,18 @@ export function NovelImportWizard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Wizard state
+  const fullTextRef = useRef("");
   const [step, setStep] = useState<Step>("input");
-  const [rawText, setRawText] = useState("");
+  const [inputMode, setInputMode] = useState<"paste" | "file">("paste");
+  const [pasteText, setPasteText] = useState("");
+  const [fileInfo, setFileInfo] = useState<{
+    name: string;
+    previewLines: string;
+    wordCount: number;
+    charCount: number;
+  } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [hasText, setHasText] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string>("vietnamese");
   const [customRegex, setCustomRegex] = useState("");
   const [useCustom, setUseCustom] = useState(false);
@@ -77,7 +87,6 @@ export function NovelImportWizard() {
   const [novelDescription, setNovelDescription] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  const wordCount = rawText ? countWords(rawText) : 0;
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   // ── File Upload ─────────────────────────────────────────
@@ -87,12 +96,53 @@ export function NovelImportWizard() {
       const file = e.target.files?.[0];
       if (!file) return;
 
+      setUploadProgress(0);
+      setInputMode("file");
+      setPasteText("");
+
       const reader = new FileReader();
+      reader.onprogress = (ev) => {
+        if (ev.lengthComputable) {
+          setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+        }
+      };
       reader.onload = (ev) => {
         const text = ev.target?.result as string;
-        setRawText(text);
+        fullTextRef.current = text;
+        const previewLines = text.split("\n").slice(0, 100).join("\n");
+        setFileInfo({
+          name: file.name,
+          previewLines,
+          wordCount: countWords(text),
+          charCount: text.length,
+        });
+        setHasText(true);
+        setUploadProgress(null);
+      };
+      reader.onerror = () => {
+        toast.error("Không thể đọc file");
+        setUploadProgress(null);
+        setInputMode("paste");
       };
       reader.readAsText(file);
+    },
+    [],
+  );
+
+  const handleClearFile = useCallback(() => {
+    fullTextRef.current = "";
+    setFileInfo(null);
+    setInputMode("paste");
+    setHasText(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  const handlePasteChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setPasteText(value);
+      fullTextRef.current = value;
+      setHasText(!!value.trim());
     },
     [],
   );
@@ -115,9 +165,9 @@ export function NovelImportWizard() {
       toast.error("Biểu thức regex không hợp lệ");
       return;
     }
-    const count = testPattern(rawText, pattern);
+    const count = testPattern(fullTextRef.current, pattern);
     setMatchCount(count);
-  }, [rawText, getActivePattern]);
+  }, [getActivePattern]);
 
   const handleSplit = useCallback(() => {
     const pattern = getActivePattern();
@@ -125,10 +175,10 @@ export function NovelImportWizard() {
       toast.error("Biểu thức regex không hợp lệ");
       return;
     }
-    const result = splitChapters(rawText, pattern);
+    const result = splitChapters(fullTextRef.current, pattern);
     setChapters(result);
     setStep("preview");
-  }, [rawText, getActivePattern]);
+  }, [getActivePattern]);
 
   // ── Chapter Editing ─────────────────────────────────────
 
@@ -257,6 +307,15 @@ export function NovelImportWizard() {
         ))}
       </div>
 
+      {/* Hidden file input (always mounted) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".txt,text/plain"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
       {/* Step 1: Input */}
       {step === "input" && (
         <Card>
@@ -267,46 +326,81 @@ export function NovelImportWizard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="novel-text">Văn bản tiểu thuyết</Label>
-              <Textarea
-                id="novel-text"
-                placeholder="Dán văn bản tiểu thuyết tại đây..."
-                className="mt-1.5 h-[300px] max-h-[300px] resize-none overflow-y-auto font-mono text-sm"
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-              />
-              {rawText && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {wordCount.toLocaleString()} từ &middot;{" "}
-                  {rawText.length.toLocaleString()} ký tự
-                </p>
-              )}
-            </div>
+            {inputMode === "paste" ? (
+              <>
+                <div>
+                  <Label htmlFor="novel-text">Văn bản tiểu thuyết</Label>
+                  <Textarea
+                    id="novel-text"
+                    placeholder="Dán văn bản tiểu thuyết tại đây..."
+                    className="mt-1.5 h-[300px] max-h-[300px] resize-none overflow-y-auto font-mono text-sm"
+                    value={pasteText}
+                    onChange={handlePasteChange}
+                  />
+                  {pasteText && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {countWords(pasteText).toLocaleString()} từ &middot;{" "}
+                      {pasteText.length.toLocaleString()} ký tự
+                    </p>
+                  )}
+                </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">hoặc</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <FileTextIcon className="mr-1.5 size-3.5" />
-                Tải file .txt
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt,text/plain"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">hoặc</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <FileTextIcon className="mr-1.5 size-3.5" />
+                    Tải file .txt
+                  </Button>
+                </div>
+              </>
+            ) : uploadProgress !== null ? (
+              <div className="space-y-3 py-8">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Đang đọc file...</span>
+                  <span className="font-medium">{uploadProgress}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-150"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            ) : fileInfo ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileTextIcon className="size-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{fileInfo.name}</span>
+                  </div>
+                  <Button variant="ghost" size="icon-sm" onClick={handleClearFile}>
+                    <XIcon className="size-3.5" />
+                  </Button>
+                </div>
+                <div className="flex gap-3 text-xs text-muted-foreground">
+                  <span>{fileInfo.wordCount.toLocaleString()} từ</span>
+                  <span>&middot;</span>
+                  <span>{fileInfo.charCount.toLocaleString()} ký tự</span>
+                </div>
+                <ScrollArea className="h-[300px] rounded-md border">
+                  <pre className="whitespace-pre-wrap p-3 font-mono text-xs text-muted-foreground">
+                    {fileInfo.previewLines}
+                  </pre>
+                </ScrollArea>
+                <p className="text-xs italic text-muted-foreground">
+                  Chỉ hiển thị 100 dòng đầu tiên
+                </p>
+              </div>
+            ) : null}
 
             <div className="flex justify-end">
               <Button
                 onClick={() => setStep("configure")}
-                disabled={!rawText.trim()}
+                disabled={!hasText}
               >
                 Tiếp
               </Button>

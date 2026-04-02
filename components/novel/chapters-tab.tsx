@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Chapter } from "@/lib/db";
 import { deleteChapter, type ChapterAnalysisStatus } from "@/lib/hooks";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   BookOpenIcon,
   CheckCircleIcon,
@@ -44,7 +45,7 @@ import {
   WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const STATUS_CONFIG: Record<
@@ -120,9 +121,28 @@ export function ChaptersTab({
   const [addOpen, setAddOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const statusMap = useMemo(() => {
+    const map = new Map<string, ChapterAnalysisStatus>();
+    if (analysisStatuses) {
+      for (const s of analysisStatuses) {
+        map.set(s.chapterId, s.status);
+      }
+    }
+    return map;
+  }, [analysisStatuses]);
+
+  const virtualizer = useVirtualizer({
+    count: chapters.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+    gap: 4,
+  });
+
   const getStatus = (chapterId: string): ChapterAnalysisStatus =>
-    analysisStatuses?.find((s) => s.chapterId === chapterId)?.status ??
-    "unanalyzed";
+    statusMap.get(chapterId) ?? "unanalyzed";
 
   const needsAnalysisCount =
     analysisStatuses?.filter((s) => s.status !== "analyzed").length ?? 0;
@@ -246,9 +266,9 @@ export function ChaptersTab({
           Chưa có chương nào. Thêm mới hoặc nhập tiểu thuyết.
         </p>
       ) : (
-        <div className="space-y-1">
+        <>
           {/* Header row — hidden on mobile since layout changes */}
-          <div className="hidden min-w-0 items-center gap-2 px-3 py-1 text-xs text-muted-foreground sm:flex">
+          <div className="hidden min-w-0 items-center gap-2 px-3 pb-2 text-xs text-muted-foreground sm:flex">
             <Checkbox
               checked={selected.size === chapters.length && chapters.length > 0}
               onCheckedChange={toggleAll}
@@ -267,179 +287,216 @@ export function ChaptersTab({
             <span className="w-[4.5rem] shrink-0" />
           </div>
 
-          {chapters.map((ch) => {
-            const status = getStatus(ch.id);
-            const statusCfg = STATUS_CONFIG[status];
-            const StatusIcon = statusCfg.icon;
-            const isExpanded = expandedId === ch.id;
+          {/* Virtualized chapter list */}
+          <div
+            ref={scrollContainerRef}
+            className="h-[calc(100svh-390px)] min-h-[300px] overflow-auto"
+          >
+            <div
+              style={{
+                height: virtualizer.getTotalSize(),
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const ch = chapters[virtualRow.index];
+                const status = getStatus(ch.id);
+                const statusCfg = STATUS_CONFIG[status];
+                const StatusIcon = statusCfg.icon;
+                const isExpanded = expandedId === ch.id;
 
-            return (
-              <div key={ch.id} className="rounded-lg border">
-                {/* Mobile: two-line layout */}
-                <div className="sm:hidden">
+                return (
                   <div
-                    role="button"
-                    tabIndex={0}
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 pt-2 pb-1 text-left"
-                    onClick={() => setExpandedId(isExpanded ? null : ch.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setExpandedId(isExpanded ? null : ch.id);
-                      }
+                    key={ch.id}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <Checkbox
-                      checked={selected.has(ch.id)}
-                      onCheckedChange={() => toggleSelect(ch.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="size-3.5 shrink-0"
-                    />
-                    <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">
-                      {ch.order}
-                    </span>
-                    {isExpanded ? (
-                      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {ch.title}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 px-3 pb-1.5 pl-[3.75rem]">
-                    <span className="text-xs text-muted-foreground">
-                      {(wordCounts.get(ch.id) ?? 0).toLocaleString()} từ
-                    </span>
-                    <StatusIcon
-                      className={`ml-1 size-3 ${statusCfg.className}`}
-                    />
-                    <div className="ml-auto flex gap-0.5">
-                      <Button variant="ghost" size="icon-xs" asChild>
-                        <Link
-                          href={`/novels/${novelId}/read?chapter=${ch.order}`}
+                    <div className="rounded-lg border">
+                      {/* Mobile: two-line layout */}
+                      <div className="sm:hidden">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 pt-2 pb-1 text-left"
+                          onClick={() =>
+                            setExpandedId(isExpanded ? null : ch.id)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setExpandedId(isExpanded ? null : ch.id);
+                            }
+                          }}
                         >
-                          <BookOpenIcon className="size-3.5" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon-xs" asChild>
-                        <Link href={`/novels/${novelId}/chapters/${ch.id}`}>
-                          <PencilIcon className="size-3.5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => setDeleteTarget(ch)}
-                      >
-                        <TrashIcon className="size-3.5" />
-                      </Button>
+                          <Checkbox
+                            checked={selected.has(ch.id)}
+                            onCheckedChange={() => toggleSelect(ch.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="size-3.5 shrink-0"
+                          />
+                          <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">
+                            {ch.order + 1}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                            {ch.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 px-3 pb-1.5 pl-[3.75rem]">
+                          <span className="text-xs text-muted-foreground">
+                            {(wordCounts.get(ch.id) ?? 0).toLocaleString()} từ
+                          </span>
+                          <StatusIcon
+                            className={`ml-1 size-3 ${statusCfg.className}`}
+                          />
+                          <div className="ml-auto flex gap-0.5">
+                            <Button variant="ghost" size="icon-xs" asChild>
+                              <Link
+                                href={`/novels/${novelId}/read?chapter=${ch.order}`}
+                              >
+                                <BookOpenIcon className="size-3.5" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" asChild>
+                              <Link
+                                href={`/novels/${novelId}/chapters/${ch.id}`}
+                              >
+                                <PencilIcon className="size-3.5" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => setDeleteTarget(ch)}
+                            >
+                              <TrashIcon className="size-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop: single-line layout */}
+                      <div className="hidden min-w-0 items-center gap-2 px-3 py-2 sm:flex">
+                        <Checkbox
+                          checked={selected.has(ch.id)}
+                          onCheckedChange={() => toggleSelect(ch.id)}
+                          className="size-3.5 shrink-0"
+                        />
+                        <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">
+                          {ch.order + 1}
+                        </span>
+                        <button
+                          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm"
+                          onClick={() =>
+                            setExpandedId(isExpanded ? null : ch.id)
+                          }
+                        >
+                          {isExpanded ? (
+                            <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="truncate font-medium">
+                            {ch.title}
+                          </span>
+                        </button>
+                        <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
+                          {(wordCounts.get(ch.id) ?? 0).toLocaleString()}
+                        </span>
+
+                        {/* Edited time — only on wide screens */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="hidden w-20 shrink-0 text-right text-xs text-muted-foreground lg:block">
+                              {formatDateTime(ch.updatedAt)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {formatDateTimeFull(ch.updatedAt)}
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Analyzed time — only on wide screens */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className={`hidden w-20 shrink-0 items-center justify-end gap-1 text-xs lg:flex ${statusCfg.className}`}
+                            >
+                              <StatusIcon className="size-3" />
+                              {ch.analyzedAt
+                                ? formatDateTime(ch.analyzedAt)
+                                : statusCfg.label}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {ch.analyzedAt
+                              ? `${statusCfg.label} — ${formatDateTimeFull(ch.analyzedAt)}`
+                              : statusCfg.label}
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Compact status icon when date columns are hidden */}
+                        <span className="flex w-6 shrink-0 justify-end lg:hidden">
+                          <StatusIcon
+                            className={`size-3.5 ${statusCfg.className}`}
+                          />
+                        </span>
+                        <div className="flex w-[4.5rem] shrink-0 justify-end gap-0.5">
+                          <Button variant="ghost" size="icon-xs" asChild>
+                            <Link
+                              href={`/novels/${novelId}/read?chapter=${ch.order}`}
+                            >
+                              <BookOpenIcon className="size-3.5" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" asChild>
+                            <Link href={`/novels/${novelId}/chapters/${ch.id}`}>
+                              <PencilIcon className="size-3.5" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => setDeleteTarget(ch)}
+                          >
+                            <TrashIcon className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Collapsible summary */}
+                      {isExpanded && ch.summary && (
+                        <div className="border-t px-4 py-2 sm:px-10">
+                          <p className="text-xs leading-relaxed text-muted-foreground">
+                            {ch.summary}
+                          </p>
+                        </div>
+                      )}
+                      {isExpanded && !ch.summary && (
+                        <div className="border-t px-4 py-2 sm:px-10">
+                          <p className="text-xs italic text-muted-foreground">
+                            Chưa có tóm tắt — chạy phân tích để tạo.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-
-                {/* Desktop: single-line layout */}
-                <div className="hidden min-w-0 items-center gap-2 px-3 py-2 sm:flex">
-                  <Checkbox
-                    checked={selected.has(ch.id)}
-                    onCheckedChange={() => toggleSelect(ch.id)}
-                    className="size-3.5 shrink-0"
-                  />
-                  <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">
-                    {ch.order}
-                  </span>
-                  <button
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm"
-                    onClick={() => setExpandedId(isExpanded ? null : ch.id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="truncate font-medium">{ch.title}</span>
-                  </button>
-                  <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
-                    {(wordCounts.get(ch.id) ?? 0).toLocaleString()}
-                  </span>
-
-                  {/* Edited time — only on wide screens */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="hidden w-20 shrink-0 text-right text-xs text-muted-foreground lg:block">
-                        {formatDateTime(ch.updatedAt)}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {formatDateTimeFull(ch.updatedAt)}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Analyzed time — only on wide screens */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className={`hidden w-20 shrink-0 items-center justify-end gap-1 text-xs lg:flex ${statusCfg.className}`}
-                      >
-                        <StatusIcon className="size-3" />
-                        {ch.analyzedAt
-                          ? formatDateTime(ch.analyzedAt)
-                          : statusCfg.label}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {ch.analyzedAt
-                        ? `${statusCfg.label} — ${formatDateTimeFull(ch.analyzedAt)}`
-                        : statusCfg.label}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Compact status icon when date columns are hidden */}
-                  <span className="flex w-6 shrink-0 justify-end lg:hidden">
-                    <StatusIcon className={`size-3.5 ${statusCfg.className}`} />
-                  </span>
-                  <div className="flex w-[4.5rem] shrink-0 justify-end gap-0.5">
-                    <Button variant="ghost" size="icon-xs" asChild>
-                      <Link
-                        href={`/novels/${novelId}/read?chapter=${ch.order}`}
-                      >
-                        <BookOpenIcon className="size-3.5" />
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="icon-xs" asChild>
-                      <Link href={`/novels/${novelId}/chapters/${ch.id}`}>
-                        <PencilIcon className="size-3.5" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => setDeleteTarget(ch)}
-                    >
-                      <TrashIcon className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Collapsible summary */}
-                {isExpanded && ch.summary && (
-                  <div className="border-t px-4 py-2 sm:px-10">
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {ch.summary}
-                    </p>
-                  </div>
-                )}
-                {isExpanded && !ch.summary && (
-                  <div className="border-t px-4 py-2 sm:px-10">
-                    <p className="text-xs italic text-muted-foreground">
-                      Chưa có tóm tắt — chạy phân tích để tạo.
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       <AddChapterDialog

@@ -99,7 +99,13 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     set(update);
   },
 
-  setPhase: (phase) => set({ phase }),
+  setPhase: (phase) =>
+    set({
+      phase,
+      ...(phase === "complete" || phase === "completed_with_errors"
+        ? { isAnalyzing: false }
+        : {}),
+    }),
 
   addError: (error) =>
     set((state) => ({ errors: [...state.errors, error] })),

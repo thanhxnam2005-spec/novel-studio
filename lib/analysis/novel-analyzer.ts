@@ -507,20 +507,6 @@ export async function analyzeNovel({
           }
         }
 
-        for (const cr of chapterResults) {
-          const charNames = cr.result.characters.map((c) =>
-            c.name.toLowerCase().trim(),
-          );
-          const charRecords = await db.characters
-            .where("novelId")
-            .equals(novelId)
-            .filter((c) => charNames.includes(c.name.toLowerCase().trim()))
-            .toArray();
-          await db.chapters.update(cr.chapterId, {
-            characterIds: charRecords.map((c) => c.id),
-            updatedAt: new Date(),
-          });
-        }
       }
 
       onProgress?.({
@@ -529,6 +515,28 @@ export async function analyzeNovel({
         totalChapters,
         phaseResult: { phase: "characters", result: "done" },
       });
+
+      // Link characters to chapters (best-effort — non-critical metadata)
+      try {
+        await Promise.all(
+          chapterResults.map(async (cr) => {
+            const charNames = cr.result.characters.map((c) =>
+              c.name.toLowerCase().trim(),
+            );
+            const charRecords = await db.characters
+              .where("novelId")
+              .equals(novelId)
+              .filter((c) => charNames.includes(c.name.toLowerCase().trim()))
+              .toArray();
+            await db.chapters.update(cr.chapterId, {
+              characterIds: charRecords.map((c) => c.id),
+              updatedAt: new Date(),
+            });
+          }),
+        );
+      } catch {
+        // Ignore characterIds link errors — character profiles are already saved
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") throw err;
       const error: AnalysisError = {
