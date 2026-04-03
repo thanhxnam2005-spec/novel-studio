@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { downloadErrorTrace, getErrorTrace } from "@/lib/ai/error-trace";
-import type { ChatImage, ChatToolCall, MessagePart } from "@/lib/db";
+import type { ChatFile, ChatImage, ChatToolCall, MessagePart } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangleIcon,
@@ -11,6 +11,7 @@ import {
   ChevronUp,
   CopyIcon,
   DownloadIcon,
+  FileTextIcon,
   PencilIcon,
   RefreshCwIcon,
   SparklesIcon,
@@ -19,9 +20,9 @@ import {
 import { useState } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
+import { useStickToBottom } from "use-stick-to-bottom";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
-import { useStickToBottom } from "use-stick-to-bottom";
 import { BrainIcon } from "../ui/brain";
 import { WrenchIcon } from "../ui/wrench";
 import { chatStreamdownComponents } from "./streamdown-components";
@@ -48,7 +49,13 @@ function formatResultPreview(result: unknown): string {
   }
 }
 
-function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
+function ToolCallItem({
+  toolCall,
+  noCollapse,
+}: {
+  toolCall: ChatToolCall;
+  noCollapse?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const label = TOOL_LABELS[toolCall.toolName] ?? toolCall.toolName;
   const hasArgs = Object.keys(toolCall.args).length > 0;
@@ -62,9 +69,13 @@ function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
       >
         <BookSearchIcon className="size-3 shrink-0" />
         <span className="flex-1 truncate font-medium">{label}</span>
-        {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+        {noCollapse ? null : open ? (
+          <ChevronUp size={10} />
+        ) : (
+          <ChevronDown size={10} />
+        )}
       </button>
-      {open && (
+      {open || noCollapse ? (
         <div className="border-t border-border/40 px-2 py-1.5 overflow-auto">
           {hasArgs && (
             <div className="mb-1.5">
@@ -85,7 +96,7 @@ function ToolCallItem({ toolCall }: { toolCall: ChatToolCall }) {
             </pre>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -119,7 +130,11 @@ function ToolCallsGroup({
       {open && (
         <div className="mb-1 space-y-1 ml-4">
           {toolCalls.map((tc, i) => (
-            <ToolCallItem key={i} toolCall={tc} />
+            <ToolCallItem
+              key={i}
+              toolCall={tc}
+              noCollapse={toolCalls.length <= 2}
+            />
           ))}
         </div>
       )}
@@ -140,6 +155,7 @@ export function MessageBubble({
     reasoning?: string;
     parts?: MessagePart[];
     images?: ChatImage[];
+    files?: ChatFile[];
   };
   isStreaming?: boolean;
   onEdit?: (newContent: string) => void;
@@ -360,6 +376,27 @@ export function MessageBubble({
               ))}
             </div>
           )}
+          {/* File chips */}
+          {message.files && message.files.length > 0 && (
+            <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
+              {message.files.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-primary/80 px-2.5 py-1.5"
+                  title={`${file.name} · ${(file.size / 1024).toFixed(0)} KB`}
+                >
+                  <FileTextIcon className="size-3 shrink-0 text-primary-foreground/70" />
+                  <span className="max-w-[120px] truncate text-[11px] font-medium text-primary-foreground">
+                    {file.name}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-primary-foreground/50">
+                    {(file.size / 1024).toFixed(0)} KB
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Lightbox */}
           {message.images && message.images.length > 0 && (
             <Lightbox
@@ -420,49 +457,53 @@ export function MessageBubble({
       )}
 
       {/* Message actions */}
-      {!editing && !isStreaming && (message.content || (isUser && !!message.images?.length)) && (
-        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
-            title="Sao chép"
-          >
-            {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
-          </button>
-          {isUser && onEdit && (
+      {!editing &&
+        !isStreaming &&
+        (message.content ||
+          (isUser &&
+            (!!message.images?.length || !!message.files?.length))) && (
+          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
             <button
               type="button"
-              onClick={startEdit}
+              onClick={handleCopy}
               className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
-              title="Sửa tin nhắn"
+              title="Sao chép"
             >
-              <PencilIcon size={11} />
+              {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
             </button>
-          )}
-          {isUser && onRerun && (
-            <button
-              type="button"
-              onClick={onRerun}
-              className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
-              title="Chạy lại tin nhắn"
-            >
-              <RefreshCwIcon size={11} />
-            </button>
-          )}
-          {isError && getErrorTrace(message.id) && (
-            <button
-              type="button"
-              onClick={handleDownloadTrace}
-              className="flex size-6 items-center justify-center gap-0.5 rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
-              title="Tải trace log"
-            >
-              <DownloadIcon size={11} />
-              <BugIcon size={11} />
-            </button>
-          )}
-        </div>
-      )}
+            {isUser && onEdit && (
+              <button
+                type="button"
+                onClick={startEdit}
+                className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
+                title="Sửa tin nhắn"
+              >
+                <PencilIcon size={11} />
+              </button>
+            )}
+            {isUser && onRerun && (
+              <button
+                type="button"
+                onClick={onRerun}
+                className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
+                title="Chạy lại tin nhắn"
+              >
+                <RefreshCwIcon size={11} />
+              </button>
+            )}
+            {isError && getErrorTrace(message.id) && (
+              <button
+                type="button"
+                onClick={handleDownloadTrace}
+                className="flex size-6 items-center justify-center gap-0.5 rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
+                title="Tải trace log"
+              >
+                <DownloadIcon size={11} />
+                <BugIcon size={11} />
+              </button>
+            )}
+          </div>
+        )}
     </div>
   );
 }

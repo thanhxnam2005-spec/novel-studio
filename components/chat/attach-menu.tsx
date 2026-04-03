@@ -13,14 +13,19 @@ import {
 } from "@/components/ui/popover";
 import { updateConversation, useNovels } from "@/lib/hooks";
 import { useChatPanel } from "@/lib/stores/chat-panel";
-import { BookOpenIcon, ImageIcon, PlusIcon, SearchIcon } from "lucide-react";
+import {
+  BookOpenIcon,
+  PaperclipIcon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 export function AttachMenuButton({
-  onImageClick,
+  onFileClick,
   disabled,
 }: {
-  onImageClick: () => void;
+  onFileClick: () => void;
   disabled?: boolean;
 }) {
   const { attachedNovelId, activeConversationId, setAttachedContext } =
@@ -60,22 +65,22 @@ export function AttachMenuButton({
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-52 p-1.5"
+          className="w-52 p-1.5 gap-0"
           side="top"
           align="start"
           sideOffset={10}
         >
-          {/* Image */}
+          {/* File */}
           <button
             type="button"
             onClick={() => {
-              onImageClick();
+              onFileClick();
               setMenuOpen(false);
             }}
             className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
           >
-            <ImageIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span>Đính kèm ảnh</span>
+            <PaperclipIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span>Đính kèm tệp</span>
           </button>
 
           {/* Novel — hidden when already attached */}

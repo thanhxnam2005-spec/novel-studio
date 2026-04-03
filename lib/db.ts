@@ -175,6 +175,13 @@ export interface ChatImage {
   name?: string;
 }
 
+export interface ChatFile {
+  name: string;
+  mimeType: string;
+  size: number; // original file size in bytes
+  content: string; // extracted text content
+}
+
 export interface ConversationMessage {
   id: string;
   conversationId: string;
@@ -185,6 +192,8 @@ export interface ConversationMessage {
   parts?: MessagePart[];
   /** Images attached to this message (user messages only) */
   images?: ChatImage[];
+  /** Text files attached to this message (user messages only) */
+  files?: ChatFile[];
   createdAt: Date;
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { buildErrorTrace, storeErrorTrace } from "@/lib/ai/error-trace";
 import { getModel } from "@/lib/ai/provider";
 import { withGlobalInstruction } from "@/lib/ai/system-prompt";
-import type { ChatImage } from "@/lib/db";
+import {
+  FILE_INPUT_ACCEPT,
+  isSupportedFile,
+  readFileAsChat,
+} from "@/lib/chat-file-reader";
+import type { ChatFile, ChatImage } from "@/lib/db";
 import {
   addMessage,
   createConversation,
@@ -153,6 +159,8 @@ export function ChatPanel() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImages, setPendingImages] = useState<ChatImage[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<ChatFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Auto-select first provider when none is set
   useEffect(() => {
@@ -247,7 +255,12 @@ export function ChatPanel() {
 
   /** Core: send a user message in a conversation and stream the response. */
   const sendAndStream = useCallback(
-    async (convoId: string, userText: string, images?: ChatImage[]) => {
+    async (
+      convoId: string,
+      userText: string,
+      images?: ChatImage[],
+      files?: ChatFile[],
+    ) => {
       if (!selectedProvider || !selectedModelId) return;
 
       setIsStreaming(true);
@@ -263,7 +276,11 @@ export function ChatPanel() {
               | string
               | Array<
                   | { type: "text"; text: string }
-                  | { type: "image"; image: string | Uint8Array; mimeType?: string }
+                  | {
+                      type: "image";
+                      image: string | Uint8Array;
+                      mimeType?: string;
+                    }
                 >;
           }
         | { role: "assistant"; content: string };
@@ -277,6 +294,7 @@ export function ChatPanel() {
           role: "user",
           content: userText,
           ...(images && images.length > 0 ? { images } : {}),
+          ...(files && files.length > 0 ? { files } : {}),
         });
 
         // Create placeholder assistant message
@@ -323,12 +341,28 @@ export function ChatPanel() {
           ...currentMessages
             .filter((m) => m.id !== assistantMsgId)
             .map((m) => {
+              // Build file content suffix for user messages
+              const filesSuffix =
+                m.role === "user" && m.files && m.files.length > 0
+                  ? m.files
+                      .map(
+                        (f) =>
+                          `\n\n<file name="${f.name}">\n${f.content}\n</file>`,
+                      )
+                      .join("")
+                  : "";
+
               if (m.role === "user" && m.images && m.images.length > 0) {
                 return {
                   role: "user" as const,
                   content: [
-                    ...(m.content
-                      ? [{ type: "text" as const, text: m.content }]
+                    ...(m.content || filesSuffix
+                      ? [
+                          {
+                            type: "text" as const,
+                            text: (m.content || "") + filesSuffix,
+                          },
+                        ]
                       : []),
                     ...m.images.map((img) => ({
                       type: "image" as const,
@@ -340,7 +374,7 @@ export function ChatPanel() {
               }
               return {
                 role: m.role as "user" | "assistant",
-                content: m.content,
+                content: m.content + filesSuffix,
               };
             }),
         ];
@@ -746,7 +780,9 @@ export function ChatPanel() {
     setInput("");
     const imagesToSend =
       pendingImages.length > 0 ? [...pendingImages] : undefined;
+    const filesToSend = pendingFiles.length > 0 ? [...pendingFiles] : undefined;
     setPendingImages([]);
+    setPendingFiles([]);
 
     // Reuse active conversation, or auto-create one if none exists
     let convoId = activeConversationId;
@@ -764,7 +800,12 @@ export function ChatPanel() {
     }
 
     const isFirstMessage = !dbMessages || dbMessages.length === 0;
-    const result = await sendAndStream(convoId, text, imagesToSend);
+    const result = await sendAndStream(
+      convoId,
+      text,
+      imagesToSend,
+      filesToSend,
+    );
 
     // Auto-title from first assistant reply
     if (isFirstMessage && result?.content) {
@@ -779,6 +820,7 @@ export function ChatPanel() {
   }, [
     input,
     pendingImages,
+    pendingFiles,
     isStreaming,
     selectedProvider,
     selectedModelId,
@@ -840,6 +882,31 @@ export function ChatPanel() {
     inputRef.current?.focus();
   }
 
+  async function handleTextFiles(files: FileList | File[]) {
+    const textFiles = Array.from(files).filter(isSupportedFile);
+    if (!textFiles.length) return;
+    const results = await Promise.allSettled(textFiles.map(readFileAsChat));
+    const successful = results
+      .filter(
+        (r): r is PromiseFulfilledResult<ChatFile> => r.status === "fulfilled",
+      )
+      .map((r) => r.value);
+    if (successful.length) {
+      setPendingFiles((prev) => [...prev, ...successful]);
+      inputRef.current?.focus();
+    }
+  }
+
+  async function handleDroppedFiles(files: FileList | File[]) {
+    const all = Array.from(files);
+    const images = all.filter((f) => f.type.startsWith("image/"));
+    const textFiles = all.filter(
+      (f) => !f.type.startsWith("image/") && isSupportedFile(f),
+    );
+    if (images.length) await handleImageFiles(images);
+    if (textFiles.length) await handleTextFiles(textFiles);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -850,7 +917,7 @@ export function ChatPanel() {
   const hasProvider = providers && providers.length > 0;
   const hasModels = models && models.length > 0;
   const canSend =
-    (!!input.trim() || pendingImages.length > 0) &&
+    (!!input.trim() || pendingImages.length > 0 || pendingFiles.length > 0) &&
     hasProvider &&
     hasModels &&
     !isStreaming;
@@ -1005,7 +1072,8 @@ export function ChatPanel() {
                   }
                   onRerun={
                     msg.role === "user" && !isStreaming
-                      ? () => handleRerunMessage(msg.id, msg.content, msg.images)
+                      ? () =>
+                          handleRerunMessage(msg.id, msg.content, msg.images)
                       : undefined
                   }
                 />
@@ -1032,27 +1100,49 @@ export function ChatPanel() {
           className={cn(
             "overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-150",
             "focus-within:border-ring/60 focus-within:shadow-[0_0_0_3px_hsl(var(--ring)/10%)]",
+            isDragging &&
+              "border-ring/60 shadow-[0_0_0_3px_hsl(var(--ring)/10%)]",
           )}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setIsDragging(false);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            if (e.dataTransfer.files.length) {
+              handleDroppedFiles(e.dataTransfer.files);
+            }
+          }}
         >
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={`image/*,${FILE_INPUT_ACCEPT}`}
             multiple
             className="hidden"
             onChange={(e) => {
               if (e.target.files) {
-                handleImageFiles(e.target.files);
+                handleDroppedFiles(e.target.files);
                 e.target.value = "";
               }
             }}
           />
 
-          {/* Image previews */}
-          {pendingImages.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto px-3 pt-3">
+          {/* Previews: images + file chips */}
+          {(pendingImages.length > 0 || pendingFiles.length > 0) && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3">
               {pendingImages.map((img, i) => (
-                <div key={i} className="relative shrink-0">
+                <div key={`img-${i}`} className="relative shrink-0">
                   <img
                     src={img.dataUrl}
                     alt={img.name ?? `Ảnh ${i + 1}`}
@@ -1069,6 +1159,37 @@ export function ChatPanel() {
                   </button>
                 </div>
               ))}
+              {pendingFiles.map((file, i) => (
+                <div
+                  key={`file-${i}`}
+                  className="relative flex h-14 max-w-[140px] shrink-0 items-center gap-2 rounded-xl border border-border/50 bg-muted/50 px-2.5"
+                >
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-[11px] font-medium leading-tight">
+                      {file.name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60">
+                      {(file.size / 1024).toFixed(0)} KB
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingFiles((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    className="absolute -right-1 -top-1 flex size-[18px] items-center justify-center rounded-full bg-foreground text-background shadow-sm transition-opacity hover:opacity-75"
+                  >
+                    <XIcon size={9} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Drag overlay hint */}
+          {isDragging && (
+            <div className="pointer-events-none px-4 pb-1 pt-2 text-[11px] text-muted-foreground/60">
+              Thả tệp để đính kèm...
             </div>
           )}
 
@@ -1085,10 +1206,20 @@ export function ChatPanel() {
               );
               if (imageItems.length > 0) {
                 e.preventDefault();
-                const files = imageItems
+                const pastedImages = imageItems
                   .map((item) => item.getAsFile())
                   .filter(Boolean) as File[];
-                handleImageFiles(files);
+                handleImageFiles(pastedImages);
+                return;
+              }
+              // Handle pasted text files
+              const fileItems = items.filter((item) => item.kind === "file");
+              const pastedFiles = fileItems
+                .map((item) => item.getAsFile())
+                .filter((f): f is File => f !== null && isSupportedFile(f));
+              if (pastedFiles.length > 0) {
+                e.preventDefault();
+                handleTextFiles(pastedFiles);
               }
             }}
             placeholder={
@@ -1106,7 +1237,7 @@ export function ChatPanel() {
             {/* Left: attach + model pill */}
             <div className="flex min-w-0 flex-1 items-center gap-1">
               <AttachMenuButton
-                onImageClick={() => fileInputRef.current?.click()}
+                onFileClick={() => fileInputRef.current?.click()}
                 disabled={!hasProvider || !hasModels || isStreaming}
               />
               <ModelSelectorButton
