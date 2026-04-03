@@ -99,8 +99,6 @@ export function SyncSettingsCard({
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
-        {syncProgressBar && <SyncProgressCard progress={syncProgressBar} />}
-
         <div className="space-y-3 rounded-xl border p-4">
           <div>
             <Label className="text-sm font-medium">Tải lên cloud</Label>
@@ -148,6 +146,8 @@ export function SyncSettingsCard({
             </div>
           )}
         </div>
+
+        {syncProgressBar && <SyncProgressCard progress={syncProgressBar} />}
 
         <div className="space-y-3 rounded-xl border p-4">
           <div>

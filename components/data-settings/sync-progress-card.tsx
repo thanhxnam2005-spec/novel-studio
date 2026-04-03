@@ -18,7 +18,9 @@ export function SyncProgressCard({ progress }: SyncProgressCardProps) {
     <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
       <div className="flex items-center justify-between text-sm">
         <span className="flex items-center gap-2 font-medium">
-          <LoaderCircleIcon className="size-4 animate-spin text-primary" />
+          {progress.percentage < 100 && (
+            <LoaderCircleIcon className="size-4 animate-spin text-primary" />
+          )}
           {progress.label}
         </span>
         <span className="tabular-nums text-muted-foreground">{progress.percentage}%</span>

@@ -338,15 +338,16 @@ export function DataSettings() {
         percentage: 100,
       });
       toast.success("Đã tải dữ liệu lên cloud.");
+      setTimeout(() => {
+        setSyncProgressBar(null);
+      }, 1200);
     } catch (err) {
+      setSyncProgressBar(null);
       toast.error(
         err instanceof Error ? err.message : "Không thể tải dữ liệu lên cloud.",
       );
     } finally {
       setSyncUploading(false);
-      setTimeout(() => {
-        setSyncProgressBar((prev) => (prev?.percentage === 100 ? null : prev));
-      }, 1200);
     }
   }, [selectedNovelIds, includeAI, includeConversations, syncPassword]);
 
@@ -511,15 +512,16 @@ export function DataSettings() {
           throw err;
         }
       }
+      setTimeout(() => {
+        setSyncProgressBar(null);
+      }, 1200);
     } catch (err) {
+      setSyncProgressBar(null);
       toast.error(
         err instanceof Error ? err.message : "Không thể tải dữ liệu đồng bộ.",
       );
     } finally {
       setSyncDownloading(false);
-      setTimeout(() => {
-        setSyncProgressBar((prev) => (prev?.percentage === 100 ? null : prev));
-      }, 1200);
     }
   }, [syncDownloadCode]);
 
