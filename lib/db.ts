@@ -169,6 +169,12 @@ export type MessagePart =
   | { type: "text"; content: string }
   | { type: "tool-calls"; toolCalls: ChatToolCall[] };
 
+export interface ChatImage {
+  dataUrl: string; // base64 data URL, e.g. "data:image/jpeg;base64,..."
+  mimeType: string; // "image/jpeg" | "image/png" | "image/webp" | etc.
+  name?: string;
+}
+
 export interface ConversationMessage {
   id: string;
   conversationId: string;
@@ -177,6 +183,8 @@ export interface ConversationMessage {
   reasoning?: string;
   /** Ordered parts for interleaved text/tool-call rendering */
   parts?: MessagePart[];
+  /** Images attached to this message (user messages only) */
+  images?: ChatImage[];
   createdAt: Date;
 }
 

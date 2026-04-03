@@ -9,10 +9,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -23,6 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { buildErrorTrace, storeErrorTrace } from "@/lib/ai/error-trace";
 import { getModel } from "@/lib/ai/provider";
 import { withGlobalInstruction } from "@/lib/ai/system-prompt";
+import type { ChatImage } from "@/lib/db";
 import {
   addMessage,
   createConversation,
@@ -43,23 +40,70 @@ import { useReaderPanel } from "@/lib/stores/reader-panel";
 import { cn } from "@/lib/utils";
 import { APICallError, stepCountIs, streamText } from "ai";
 import {
+  ArrowUpIcon,
   BotIcon,
   HistoryIcon,
   LoaderIcon,
   PlusIcon,
-  SendIcon,
   SettingsIcon,
+  SquareIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
+import { AttachMenuButton } from "./attach-menu";
 import { ChatHistoryDialog } from "./chat-history-dialog";
 import { ChatSettingsDialog } from "./chat-settings-dialog";
 import { MessageBubble } from "./message-bubble";
-import { NovelAttachButton } from "./novel-attach-dialog";
+import { ModelSelectorButton } from "./model-selector";
 import { NovelContextBadge } from "./novel-context-badge";
 import { ScrollToBottom } from "./scroll-to-bottom";
 import { parseThinkingTags } from "./thinking-parser";
+
+/** Convert a base64 data URL to Uint8Array for Vercel AI SDK image parts. */
+function dataUrlToUint8Array(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function compressImage(file: File): Promise<ChatImage> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX = 1024;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) {
+            height = Math.round((height * MAX) / width);
+            width = MAX;
+          } else {
+            width = Math.round((width * MAX) / height);
+            height = MAX;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+        const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        resolve({
+          dataUrl: canvas.toDataURL(mimeType, 0.85),
+          mimeType,
+          name: file.name,
+        });
+      };
+      img.src = e.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export function ChatPanel() {
   const {
@@ -107,6 +151,8 @@ export function ChatPanel() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImages, setPendingImages] = useState<ChatImage[]>([]);
 
   // Auto-select first provider when none is set
   useEffect(() => {
@@ -201,7 +247,7 @@ export function ChatPanel() {
 
   /** Core: send a user message in a conversation and stream the response. */
   const sendAndStream = useCallback(
-    async (convoId: string, userText: string) => {
+    async (convoId: string, userText: string, images?: ChatImage[]) => {
       if (!selectedProvider || !selectedModelId) return;
 
       setIsStreaming(true);
@@ -209,10 +255,19 @@ export function ChatPanel() {
       abortRef.current = controller;
 
       let assistantMsgId: string | null = null;
-      let history: {
-        role: "system" | "user" | "assistant";
-        content: string;
-      }[] = [];
+      type HistoryMsg =
+        | { role: "system"; content: string }
+        | {
+            role: "user";
+            content:
+              | string
+              | Array<
+                  | { type: "text"; text: string }
+                  | { type: "image"; image: string | Uint8Array; mimeType?: string }
+                >;
+          }
+        | { role: "assistant"; content: string };
+      let history: HistoryMsg[] = [];
       let latestStreamedContent = "";
 
       try {
@@ -221,6 +276,7 @@ export function ChatPanel() {
           conversationId: convoId,
           role: "user",
           content: userText,
+          ...(images && images.length > 0 ? { images } : {}),
         });
 
         // Create placeholder assistant message
@@ -266,10 +322,27 @@ export function ChatPanel() {
           },
           ...currentMessages
             .filter((m) => m.id !== assistantMsgId)
-            .map((m) => ({
-              role: m.role as "user" | "assistant",
-              content: m.content,
-            })),
+            .map((m) => {
+              if (m.role === "user" && m.images && m.images.length > 0) {
+                return {
+                  role: "user" as const,
+                  content: [
+                    ...(m.content
+                      ? [{ type: "text" as const, text: m.content }]
+                      : []),
+                    ...m.images.map((img) => ({
+                      type: "image" as const,
+                      image: dataUrlToUint8Array(img.dataUrl),
+                      mimeType: img.mimeType,
+                    })),
+                  ],
+                };
+              }
+              return {
+                role: m.role as "user" | "assistant",
+                content: m.content,
+              };
+            }),
         ];
 
         // Conditionally include tools when a novel is attached
@@ -460,7 +533,9 @@ export function ChatPanel() {
                 if (stepReasoning) setStreamingReasoning(stepReasoning);
                 setStreamingContent(stepParsed.content);
                 latestStreamedContent = stepParsed.content;
-                const stepText = lastParsedContent.slice(lastCommittedParsedLen);
+                const stepText = lastParsedContent.slice(
+                  lastCommittedParsedLen,
+                );
                 if (stepText) {
                   committedParts.push({ type: "text", content: stepText });
                 }
@@ -660,9 +735,18 @@ export function ChatPanel() {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || isStreaming || !selectedProvider || !selectedModelId) return;
+    if (
+      (!text && pendingImages.length === 0) ||
+      isStreaming ||
+      !selectedProvider ||
+      !selectedModelId
+    )
+      return;
 
     setInput("");
+    const imagesToSend =
+      pendingImages.length > 0 ? [...pendingImages] : undefined;
+    setPendingImages([]);
 
     // Reuse active conversation, or auto-create one if none exists
     let convoId = activeConversationId;
@@ -680,7 +764,7 @@ export function ChatPanel() {
     }
 
     const isFirstMessage = !dbMessages || dbMessages.length === 0;
-    const result = await sendAndStream(convoId, text);
+    const result = await sendAndStream(convoId, text, imagesToSend);
 
     // Auto-title from first assistant reply
     if (isFirstMessage && result?.content) {
@@ -694,6 +778,7 @@ export function ChatPanel() {
     }
   }, [
     input,
+    pendingImages,
     isStreaming,
     selectedProvider,
     selectedModelId,
@@ -715,12 +800,12 @@ export function ChatPanel() {
     [isStreaming, activeConversationId, sendAndStream],
   );
 
-  /** Rerun a user message: delete it and its response, then resend the same text. */
+  /** Rerun a user message: delete it and its response, then resend the same text and images. */
   const handleRerunMessage = useCallback(
-    async (messageId: string, content: string) => {
+    async (messageId: string, content: string, images?: ChatImage[]) => {
       if (isStreaming || !activeConversationId) return;
       await deleteMessagesFrom(activeConversationId, messageId);
-      await sendAndStream(activeConversationId, content);
+      await sendAndStream(activeConversationId, content, images);
     },
     [isStreaming, activeConversationId, sendAndStream],
   );
@@ -745,6 +830,16 @@ export function ChatPanel() {
     setAttachedContext(pageNovelId, pageNovelId ? pageChapterId : null);
   }
 
+  async function handleImageFiles(files: FileList | File[]) {
+    const imageFiles = Array.from(files).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!imageFiles.length) return;
+    const compressed = await Promise.all(imageFiles.map(compressImage));
+    setPendingImages((prev) => [...prev, ...compressed]);
+    inputRef.current?.focus();
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -754,7 +849,11 @@ export function ChatPanel() {
 
   const hasProvider = providers && providers.length > 0;
   const hasModels = models && models.length > 0;
-  const canSend = !!input.trim() && hasProvider && hasModels && !isStreaming;
+  const canSend =
+    (!!input.trim() || pendingImages.length > 0) &&
+    hasProvider &&
+    hasModels &&
+    !isStreaming;
 
   // Merge DB messages with in-progress streaming
   const displayMessages = (dbMessages ?? []).map((m) =>
@@ -771,12 +870,14 @@ export function ChatPanel() {
   const panelContent = (
     <>
       {/* Header */}
-      <div className="flex h-12 shrink-0 items-center justify-between border-b px-3">
-        <div className="flex items-center gap-2">
-          <BotIcon className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Trò chuyện AI</span>
+      <div className="flex h-11 shrink-0 items-center justify-between border-b px-2.5">
+        <div className="flex items-center gap-2 pl-1">
+          <BotIcon className="size-3.5 text-muted-foreground/70" />
+          <span className="text-[13px] font-medium tracking-tight">
+            Trò chuyện AI
+          </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <Button
             variant="ghost"
             size="icon-xs"
@@ -801,6 +902,7 @@ export function ChatPanel() {
           >
             <SettingsIcon />
           </Button>
+          <div className="mx-1 h-3.5 w-px bg-border/60" />
           <Button variant="ghost" size="icon-xs" onClick={close}>
             <XIcon />
           </Button>
@@ -862,7 +964,7 @@ export function ChatPanel() {
         resize="smooth"
         initial="instant"
       >
-        <StickToBottom.Content className="flex flex-col gap-4 p-4">
+        <StickToBottom.Content className="flex flex-col gap-5 px-4 py-5">
           {!hasProvider ? (
             <Empty className="my-8">
               <EmptyHeader>
@@ -903,7 +1005,7 @@ export function ChatPanel() {
                   }
                   onRerun={
                     msg.role === "user" && !isStreaming
-                      ? () => handleRerunMessage(msg.id, msg.content)
+                      ? () => handleRerunMessage(msg.id, msg.content, msg.images)
                       : undefined
                   }
                 />
@@ -913,9 +1015,9 @@ export function ChatPanel() {
             !streamingContent &&
             !streamingReasoning &&
             streamingParts.length === 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
+              <div className="flex items-center gap-2 pl-1 text-[12px] text-muted-foreground/60">
                 <LoaderIcon className="size-3 animate-spin" />
-                Đang kết nối...
+                <span>Đang kết nối...</span>
               </div>
             )}
         </StickToBottom.Content>
@@ -924,14 +1026,71 @@ export function ChatPanel() {
 
       <NovelContextBadge />
 
-      {/* Input */}
-      <div className="shrink-0 border-t p-3">
-        <div className="flex items-end gap-2">
+      {/* Composer */}
+      <div className="shrink-0 border-t bg-card/50 px-3 pb-3 pt-2.5">
+        <div
+          className={cn(
+            "overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-150",
+            "focus-within:border-ring/60 focus-within:shadow-[0_0_0_3px_hsl(var(--ring)/10%)]",
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) {
+                handleImageFiles(e.target.files);
+                e.target.value = "";
+              }
+            }}
+          />
+
+          {/* Image previews */}
+          {pendingImages.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto px-3 pt-3">
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative shrink-0">
+                  <img
+                    src={img.dataUrl}
+                    alt={img.name ?? `Ảnh ${i + 1}`}
+                    className="h-14 w-14 rounded-xl border border-border/50 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingImages((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    className="absolute -right-1 -top-1 flex size-[18px] items-center justify-center rounded-full bg-foreground text-background shadow-sm transition-opacity hover:opacity-75"
+                  >
+                    <XIcon size={9} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Textarea */}
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={(e) => {
+              const items = Array.from(e.clipboardData.items);
+              const imageItems = items.filter((item) =>
+                item.type.startsWith("image/"),
+              );
+              if (imageItems.length > 0) {
+                e.preventDefault();
+                const files = imageItems
+                  .map((item) => item.getAsFile())
+                  .filter(Boolean) as File[];
+                handleImageFiles(files);
+              }
+            }}
             placeholder={
               hasProvider
                 ? "Hỏi trợ lý sáng tác..."
@@ -939,58 +1098,71 @@ export function ChatPanel() {
             }
             disabled={!hasProvider || !hasModels}
             rows={1}
-            className="field-sizing-content max-h-32 min-h-8 flex-1 resize-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            className="field-sizing-content max-h-36 min-h-11 w-full resize-none bg-transparent px-4 pb-2 pt-3 text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 disabled:opacity-40"
           />
-          {isStreaming ? (
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={handleStop}
-              title="Dừng tạo"
-            >
-              <XIcon />
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              onClick={handleSend}
-              disabled={!canSend}
-              title="Gửi tin nhắn"
-            >
-              <SendIcon />
-            </Button>
-          )}
-        </div>
-        <div className="mt-1.5 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <NativeSelect
-              size="sm"
-              className="max-w-[160px] *:text-[11px]!"
-              value={selectedModelId}
-              onChange={(e) => {
-                const id = e.target.value;
-                updateChatSettings({ modelId: id });
-                if (activeConversationId) {
-                  updateConversation(activeConversationId, { modelId: id });
-                }
-              }}
-              disabled={!hasModels || isStreaming}
-            >
-              {!hasModels && (
-                <NativeSelectOption value="">Không có model</NativeSelectOption>
-              )}
-              {models?.map((m) => (
-                <NativeSelectOption key={m.id} value={m.modelId}>
-                  {m.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-            <NovelAttachButton />
+
+          {/* Action bar */}
+          <div className="flex items-center gap-2 px-2.5 pb-2.5">
+            {/* Left: attach + model pill */}
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+              <AttachMenuButton
+                onImageClick={() => fileInputRef.current?.click()}
+                disabled={!hasProvider || !hasModels || isStreaming}
+              />
+              <ModelSelectorButton
+                providers={providers ?? []}
+                models={models}
+                selectedProviderId={selectedProviderId}
+                selectedModelId={selectedModelId}
+                onProviderChange={(id) => {
+                  updateChatSettings({ providerId: id, modelId: "" });
+                  if (activeConversationId) {
+                    updateConversation(activeConversationId, {
+                      providerId: id,
+                      modelId: "",
+                    });
+                  }
+                }}
+                onModelChange={(id) => {
+                  updateChatSettings({ modelId: id });
+                  if (activeConversationId) {
+                    updateConversation(activeConversationId, { modelId: id });
+                  }
+                }}
+                disabled={isStreaming}
+              />
+            </div>
+
+            {/* Right: send / stop */}
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={handleStop}
+                title="Dừng tạo"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-75"
+              >
+                <SquareIcon size={10} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={!canSend}
+                title="Gửi tin nhắn"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-80 disabled:opacity-20"
+              >
+                <ArrowUpIcon size={14} />
+              </button>
+            )}
           </div>
-          <span className="text-[10px] text-muted-foreground/60">
-            <kbd className="font-mono">Shift+Enter</kbd> dòng mới
-          </span>
         </div>
+
+        {/* <p className="mt-1.5 text-center text-[10px] text-muted-foreground/35">
+          <kbd className="rounded bg-muted px-1 py-px font-mono text-[9px]">
+            Shift+Enter
+          </kbd>{" "}
+          xuống dòng
+        </p> */}
       </div>
     </>
   );

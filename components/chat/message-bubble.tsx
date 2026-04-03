@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { downloadErrorTrace, getErrorTrace } from "@/lib/ai/error-trace";
-import type { ChatToolCall, MessagePart } from "@/lib/db";
+import type { ChatImage, ChatToolCall, MessagePart } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangleIcon,
@@ -13,11 +13,14 @@ import {
   DownloadIcon,
   PencilIcon,
   RefreshCwIcon,
+  SparklesIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { BrainIcon } from "../ui/brain";
 import { WrenchIcon } from "../ui/wrench";
@@ -136,6 +139,7 @@ export function MessageBubble({
     content: string;
     reasoning?: string;
     parts?: MessagePart[];
+    images?: ChatImage[];
   };
   isStreaming?: boolean;
   onEdit?: (newContent: string) => void;
@@ -183,6 +187,8 @@ export function MessageBubble({
     }
   }
 
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -207,10 +213,10 @@ export function MessageBubble({
       <div
         key={key}
         className={cn(
-          "max-w-[85%] rounded-xl px-3 py-2 text-[13px] leading-snug",
+          "max-w-[85%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-[13px] leading-relaxed",
           isError
             ? "border border-destructive/30 bg-destructive/10 text-destructive"
-            : "bg-muted text-foreground",
+            : "bg-muted/70 text-foreground",
         )}
       >
         {isError ? (
@@ -281,9 +287,14 @@ export function MessageBubble({
         isUser ? "items-end" : "items-start",
       )}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        {isUser ? "Bạn" : "Trợ lý"}
-      </span>
+      <div className="flex items-center gap-1.5">
+        {!isUser && (
+          <SparklesIcon className="size-2.5 text-muted-foreground/50" />
+        )}
+        <span className="text-[10px] font-medium text-muted-foreground/60">
+          {isUser ? "Bạn" : "Trợ lý"}
+        </span>
+      </div>
 
       {/* Reasoning / thinking block */}
       {hasReasoning && (
@@ -326,44 +337,80 @@ export function MessageBubble({
 
       {/* Interleaved content: parts (text + tool-calls) or fallback */}
       {isUser ? (
-        <div
-          className={cn(
-            "max-w-[85%] rounded-xl px-3 py-2 text-[13px] leading-snug",
-            "bg-primary text-primary-foreground",
-          )}
-        >
-          {editing ? (
-            <div className="flex flex-col gap-2">
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onKeyDown={handleEditKeyDown}
-                className="field-sizing-content max-h-32 min-h-8 w-full resize-none rounded-md border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-1.5 text-[13px] text-primary-foreground outline-none placeholder:text-primary-foreground/50"
-                autoFocus
-              />
-              <div className="flex justify-end gap-1">
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={cancelEdit}
-                  className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+        <>
+          {/* Image grid */}
+          {message.images && message.images.length > 0 && (
+            <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
+              {message.images.map((img, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setLightboxIndex(i);
+                    setLightboxOpen(true);
+                  }}
+                  className="overflow-hidden rounded-lg border border-white/10 transition-opacity hover:opacity-90"
                 >
-                  <XIcon />
-                </Button>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={confirmEdit}
-                  className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                >
-                  <CheckIcon />
-                </Button>
-              </div>
+                  <img
+                    src={img.dataUrl}
+                    alt={img.name ?? `Ảnh ${i + 1}`}
+                    className="max-h-40 max-w-40 object-cover"
+                  />
+                </button>
+              ))}
             </div>
-          ) : (
-            <p className="whitespace-pre-wrap">{message.content || "\u00A0"}</p>
           )}
-        </div>
+          {/* Lightbox */}
+          {message.images && message.images.length > 0 && (
+            <Lightbox
+              open={lightboxOpen}
+              close={() => setLightboxOpen(false)}
+              index={lightboxIndex}
+              slides={message.images.map((img) => ({ src: img.dataUrl }))}
+            />
+          )}
+          {/* Text bubble */}
+          {(editing || !!message.content) && (
+            <div
+              className={cn(
+                "max-w-[85%] rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-[13px] leading-relaxed",
+                "bg-primary text-primary-foreground shadow-sm",
+              )}
+            >
+              {editing ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={handleEditKeyDown}
+                    className="field-sizing-content max-h-32 min-h-8 w-full resize-none rounded-md border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-1.5 text-[13px] text-primary-foreground outline-none placeholder:text-primary-foreground/50"
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={cancelEdit}
+                      className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                    >
+                      <XIcon />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={confirmEdit}
+                      className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                    >
+                      <CheckIcon />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              )}
+            </div>
+          )}
+        </>
       ) : hasParts ? (
         /* Render ordered parts: text ↔ tool-calls interleaved */
         renderParts()
@@ -373,45 +420,45 @@ export function MessageBubble({
       )}
 
       {/* Message actions */}
-      {!editing && !isStreaming && message.content && (
-        <div className="flex gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
+      {!editing && !isStreaming && (message.content || (isUser && !!message.images?.length)) && (
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
           <button
             type="button"
             onClick={handleCopy}
-            className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
             title="Sao chép"
           >
-            {copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
+            {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
           </button>
           {isUser && onEdit && (
             <button
               type="button"
               onClick={startEdit}
-              className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
               title="Sửa tin nhắn"
             >
-              <PencilIcon size={12} />
+              <PencilIcon size={11} />
             </button>
           )}
           {isUser && onRerun && (
             <button
               type="button"
               onClick={onRerun}
-              className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-6 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
               title="Chạy lại tin nhắn"
             >
-              <RefreshCwIcon size={12} />
+              <RefreshCwIcon size={11} />
             </button>
           )}
           {isError && getErrorTrace(message.id) && (
             <button
               type="button"
               onClick={handleDownloadTrace}
-              className="flex items-center gap-1 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-6 items-center justify-center gap-0.5 rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
               title="Tải trace log"
             >
-              <DownloadIcon size={12} />
-              <BugIcon size={12} />
+              <DownloadIcon size={11} />
+              <BugIcon size={11} />
             </button>
           )}
         </div>
