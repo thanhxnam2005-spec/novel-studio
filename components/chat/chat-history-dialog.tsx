@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeText } from "@/lib/utils";
 import { Trash2Icon } from "lucide-react";
 
 export function ChatHistoryDialog({
@@ -51,9 +51,9 @@ export function ChatHistoryDialog({
                   className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left"
                   onClick={() => onSelect(convo.id)}
                 >
-                  <span className="w-full truncate font-medium">
-                    {convo.title}
-                  </span>
+                  <div className="w-full truncate font-medium">
+                    {sanitizeText(convo.title)}
+                  </div>
                   <span className="text-[11px] text-muted-foreground">
                     {convo.updatedAt.toLocaleDateString(undefined, {
                       month: "short",

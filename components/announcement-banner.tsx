@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, markdownToHtml, isHex } from "@/lib/utils";
 import DOMPurify from "dompurify";
 import { BellIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -31,36 +31,6 @@ function isValidAnnouncement(a: unknown): a is Announcement {
     VALID_TYPES.has(obj.type as string) &&
     (obj.textColor === undefined || typeof obj.textColor === "string") &&
     (obj.bgColor === undefined || typeof obj.bgColor === "string")
-  );
-}
-
-const isHex = (v: string) => /^#([0-9a-fA-F]{3,8})$/.test(v);
-
-/** Convert basic markdown to HTML (bold, italic, links, inline code) */
-function markdownToHtml(md: string): string {
-  return (
-    md
-      // inline code (before other inline transforms)
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      // bold
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // italic
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      // links (only allow http(s) and relative paths)
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        (_match, text: string, url: string) => {
-          if (/^https?:\/\//.test(url)) {
-            return `<a href="${url}" class="underline font-medium hover:opacity-80" target="_blank" rel="noopener noreferrer">${text}</a>`;
-          }
-          if (/^\/[^/]/.test(url) || url.startsWith("#")) {
-            return `<a href="${url}" class="underline font-medium hover:opacity-80">${text}</a>`;
-          }
-          return text;
-        },
-      )
-      // line breaks
-      .replace(/\n/g, "<br />")
   );
 }
 
