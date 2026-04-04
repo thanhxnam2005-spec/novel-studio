@@ -1,8 +1,16 @@
 {
   "announcements": [
     {
-      "id": "fix-bugs-and-enhancements-2026-04-03",
+      "id": "sync-and-auto-write-enhancements-2026-04-05",
       "enabled": true,
+      "type": "info",
+      "content": "v0.11.0 - **Đồng bộ dữ liệu & Nâng cấp Auto-Write**: Lưu và đồng bộ thư viện giữa các thiết bị. Chế độ AI viết thông minh, chạy tự động. [Xem chi tiết](/changelog)",
+      "bgColor": "bg-violet-500/10 dark:bg-violet-500/15",
+      "textColor": "text-violet-700 dark:text-violet-300"
+    },
+    {
+      "id": "fix-bugs-and-enhancements-2026-04-03",
+      "enabled": false,
       "type": "info",
       "content": "v0.10 - **Viết AI và nâng cấp Chat**: Ra mắt tính năng viết truyện tự động và nâng cấp công cụ chat AI. [Xem chi tiết](/changelog)",
       "bgColor": "bg-emerald-500/10 dark:bg-emerald-500/15",

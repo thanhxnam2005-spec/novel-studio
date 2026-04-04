@@ -3,7 +3,10 @@
 import { cn, markdownToHtml, isHex } from "@/lib/utils";
 import DOMPurify from "dompurify";
 import { BellIcon, XIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+
+const AUTO_WRITE_PATH = /^\/novels\/[^/]+\/auto-write/;
 
 interface Announcement {
   id: string;
@@ -43,6 +46,7 @@ const typeStyles: Record<Announcement["type"], string> = {
 };
 
 export function AnnouncementBanner() {
+  const pathname = usePathname();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -73,6 +77,7 @@ export function AnnouncementBanner() {
     setDismissed(true);
   }, [announcement]);
 
+  if (AUTO_WRITE_PATH.test(pathname)) return null;
   if (!announcement || dismissed) return null;
 
   const sanitizedHtml = DOMPurify.sanitize(

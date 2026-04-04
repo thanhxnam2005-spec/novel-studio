@@ -65,6 +65,64 @@ export const CATEGORY_META: Record<
 
 export const changelog: ChangelogRelease[] = [
   {
+    version: "0.11.0",
+    date: "2026-04-05",
+    title: "Đồng bộ & Nâng cấp Auto-Write",
+    summary:
+      "Lưu và đồng bộ dữ liệu giữa các thiết bị. Thêm ảnh bìa cho tiểu thuyết, ảnh đại diện cho nhân vật. Nâng cấp toàn diện quy trình viết tự động với chế độ viết liên tục, viết thông minh và khả năng làm lại từng bước.",
+    changes: [
+      {
+        category: "feature",
+        description: "Đồng bộ dữ liệu giữa các thiết bị",
+        details:
+          "Tải dữ liệu lên hoặc tải về để đồng bộ thư viện tiểu thuyết giữa các thiết bị khác nhau. Theo dõi tiến trình đồng bộ trực tiếp trong trang cài đặt.",
+        tags: ["đồng bộ", "dữ liệu"],
+      },
+      {
+        category: "feature",
+        description: "Ảnh bìa tiểu thuyết và ảnh đại diện nhân vật",
+        details:
+          "Thêm ảnh bìa khi tạo hoặc chỉnh sửa tiểu thuyết. Chọn ảnh đại diện cho từng nhân vật trong trang chỉnh sửa nhân vật.",
+        tags: ["tiểu thuyết", "nhân vật", "giao diện"],
+      },
+      {
+        category: "feature",
+        description: "Chế độ viết liên tục (Hands-free)",
+        details:
+          "Bật chế độ này để AI tự động chạy toàn bộ quy trình viết từ đầu đến cuối mà không cần bạn xác nhận từng bước. Phù hợp khi muốn để AI viết một lèo nhiều chương.",
+        tags: ["viết truyện", "AI"],
+      },
+      {
+        category: "feature",
+        description: "Chế độ viết thông minh",
+        details:
+          "Thay vì chạy bước Bối cảnh riêng, AI tự tra cứu thông tin cần thiết ngay trong lúc viết bằng các công cụ tìm kiếm nội bộ. Nhanh hơn và tiết kiệm chi phí hơn với mỗi chương.",
+        tags: ["viết truyện", "AI"],
+      },
+      {
+        category: "feature",
+        description: "Hướng dẫn riêng cho từng bước viết",
+        details:
+          "Thêm ghi chú hướng dẫn cho từng bước trong quy trình (Hướng đi, Giàn ý, Viết, Đánh giá). AI sẽ đọc hướng dẫn này mỗi khi thực hiện bước đó.",
+        tags: ["viết truyện", "tùy chỉnh"],
+      },
+      {
+        category: "feature",
+        description: "Tạo thêm kế hoạch chương và chỉnh sửa kế hoạch",
+        details:
+          "Thêm kế hoạch cho các chương tiếp theo hoặc chỉnh sửa kế hoạch chương hiện có ngay trong giao diện Auto-Write.",
+        tags: ["viết truyện", "kế hoạch"],
+      },
+      {
+        category: "improvement",
+        description: "Quản lý model AI dễ dàng hơn",
+        details:
+          "Tạo và chỉnh sửa thông tin model AI thủ công trong trang cài đặt nhà cung cấp. Model miễn phí được đánh dấu riêng để dễ phân biệt.",
+        tags: ["cài đặt", "AI"],
+      },
+    ],
+  },
+  {
     version: "0.10.3",
     date: "2026-04-04",
     title: "Mở rộng công cụ chat AI",
