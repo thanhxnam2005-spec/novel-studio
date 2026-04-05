@@ -1,12 +1,16 @@
 "use client";
 
+import {
+  WEBGPU_SYSTEM_PROVIDER_ID,
+  filterApiInferenceProviders,
+} from "@/lib/ai/api-inference";
 import { db, type AIProvider } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
 
 // ─── System Provider (always available, no CRUD) ────────────
 
 export const WEBGPU_SYSTEM_PROVIDER: AIProvider = {
-  id: "webgpu-system",
+  id: WEBGPU_SYSTEM_PROVIDER_ID,
   name: "WebGPU (Miễn phí)",
   baseUrl: "",
   apiKey: "",
@@ -17,7 +21,7 @@ export const WEBGPU_SYSTEM_PROVIDER: AIProvider = {
 };
 
 export function isSystemProvider(id: string | undefined): boolean {
-  return id === WEBGPU_SYSTEM_PROVIDER.id;
+  return id === WEBGPU_SYSTEM_PROVIDER_ID;
 }
 
 // ─── Provider Queries ───────────────────────────────────────
@@ -29,6 +33,12 @@ export function useAIProviders() {
   if (!dbProviders) return undefined;
   // Append system provider at the end (always available)
   return [...dbProviders, WEBGPU_SYSTEM_PROVIDER];
+}
+
+/** Providers allowed for analysis, chapter tools, writing pipeline (excludes WebGPU). */
+export function useApiInferenceProviders() {
+  const all = useAIProviders();
+  return filterApiInferenceProviders(all);
 }
 
 export function useAIProvider(id: string | undefined) {

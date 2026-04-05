@@ -170,7 +170,7 @@ export default function NovelDetailPage() {
         {/* Cover image */}
         {novel.coverImage && (
           <div className="relative w-28 shrink-0 sm:w-36">
-            <div className="aspect-2/3 overflow-hidden rounded-lg shadow-md">
+            <div className="aspect-3/4 overflow-hidden rounded-lg shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={novel.coverImage}

@@ -7,6 +7,7 @@ import {
   resolveChapterToolPrompts,
 } from "@/lib/chapter-tools/prompts";
 import {
+  getChapterToolModelMissingMessage,
   resolveChapterToolModel,
   runChapterToolStream,
 } from "@/lib/chapter-tools/stream-runner";
@@ -55,7 +56,7 @@ export function EditMode({
     ]);
 
     if (!model) {
-      toast.error("Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.");
+      toast.error(getChapterToolModelMissingMessage(provider));
       return;
     }
 

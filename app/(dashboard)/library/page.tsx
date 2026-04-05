@@ -238,7 +238,7 @@ export default function LibraryPage() {
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="aspect-2/3 w-full rounded-lg bg-muted" />
+              <div className="aspect-3/4 w-full rounded-lg bg-muted" />
               <div className="mt-2 space-y-1.5 px-0.5">
                 <div className="h-3 w-4/5 rounded bg-muted" />
                 <div className="h-2.5 w-3/5 rounded bg-muted" />
@@ -396,7 +396,7 @@ export default function LibraryPage() {
                   onClick={() => router.push(`/novels/${novel.id}`)}
                 >
                   {/* Book cover — 2:3 ratio */}
-                  <div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-muted shadow-sm transition-shadow group-hover:shadow-md">
+                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted shadow-sm transition-shadow group-hover:shadow-md">
                     {novel.coverImage ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,6 +1,10 @@
+import {
+  WEBGPU_BLOCKED_FOR_API_INFERENCE_VI,
+  isWebGpuInferenceProviderId,
+} from "@/lib/ai/api-inference";
+import { resolveStep } from "@/lib/ai/resolve-step";
 import { db } from "@/lib/db";
 import type { WritingAgentRole } from "@/lib/db";
-import { resolveStep } from "@/lib/ai/resolve-step";
 import { getDefaultPrompt } from "./prompts";
 import { buildWritingContext } from "./context-builder";
 import { runContextAgent } from "./agents/context-agent";
@@ -20,7 +24,6 @@ import type {
   ReviewAgentOutput,
   WritingContext,
 } from "./types";
-import type { LanguageModel } from "ai";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -58,15 +61,6 @@ const STEP_ORDER: WritingAgentRole[] = [
 
 // ─── Helpers ────────────────────────────────────────────────
 
-async function getDefaultModel(): Promise<LanguageModel | undefined> {
-  const chatSettings = await db.chatSettings.get("default");
-  if (!chatSettings?.providerId || !chatSettings?.modelId) return undefined;
-  return resolveStep({
-    providerId: chatSettings.providerId,
-    modelId: chatSettings.modelId,
-  });
-}
-
 async function getAgentConfig(
   novelId: string,
   role: WritingAgentRole,
@@ -83,12 +77,21 @@ async function getAgentConfig(
   let model = stepModelConfig
     ? await resolveStep(stepModelConfig)
     : undefined;
-  if (!model) {
-    model = await getDefaultModel();
+  if (
+    !model &&
+    chatSettings?.providerId &&
+    chatSettings?.modelId
+  ) {
+    model = await resolveStep({
+      providerId: chatSettings.providerId,
+      modelId: chatSettings.modelId,
+    });
   }
   if (!model) {
     throw new Error(
-      "Không tìm thấy mô hình AI. Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.",
+      isWebGpuInferenceProviderId(chatSettings?.providerId)
+        ? WEBGPU_BLOCKED_FOR_API_INFERENCE_VI
+        : "Không tìm thấy mô hình AI. Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.",
     );
   }
 

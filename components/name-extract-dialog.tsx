@@ -38,7 +38,10 @@ import {
 } from "@/lib/chapter-tools/name-extract";
 import { bulkCreateNameEntries } from "@/lib/hooks/use-name-entries";
 import { useAnalysisSettings, useChatSettings, useAIProvider } from "@/lib/hooks";
-import { resolveChapterToolModel } from "@/lib/chapter-tools/stream-runner";
+import {
+  getChapterToolModelMissingMessage,
+  resolveChapterToolModel,
+} from "@/lib/chapter-tools/stream-runner";
 
 export function NameExtractDialog({
   open,
@@ -85,7 +88,7 @@ export function NameExtractDialog({
           chatSettings,
         );
         if (!model) {
-          toast.error("Vui lòng cấu hình nhà cung cấp AI");
+          toast.error(getChapterToolModelMissingMessage(provider));
           setIsExtracting(false);
           return;
         }

@@ -15,7 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmInterruptDialog } from "@/components/ui/confirm-interrupt-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  WEBGPU_BLOCKED_FOR_API_INFERENCE_VI,
+  isWebGpuInferenceProvider,
+} from "@/lib/ai/api-inference";
 import { getModel } from "@/lib/ai/provider";
+import { resolveStep as resolveConfiguredStepModel } from "@/lib/ai/resolve-step";
 import {
   analyzeNovel,
   analyzeNovelIncremental,
@@ -26,7 +31,6 @@ import {
   DEFAULT_NOVEL_AGGREGATION_SYSTEM,
   DEFAULT_CHARACTER_PROFILING_SYSTEM,
 } from "@/lib/analysis";
-import { db } from "@/lib/db";
 import {
   useAIProvider,
   useAnalysisSettings,
@@ -175,25 +179,15 @@ export function AnalysisDialog({
         ? "Phân tích còn lại"
         : `Phân tích đã chọn (${selectedChapterIds?.length ?? 0})`;
 
-  const resolveStep = useCallback(
-    async (cfg: { providerId: string; modelId: string } | undefined) => {
-      if (!cfg?.providerId || !cfg?.modelId) return undefined;
-      const p = await db.aiProviders.get(cfg.providerId);
-      if (!p) return undefined;
-      return await getModel(p, cfg.modelId);
-    },
-    [],
-  );
-
   const runPipeline = useCallback(
     async (skipPhases?: SkipPhases, retryChapterIds?: string[]) => {
       if (!provider || !chatSettings?.modelId) return;
 
       const [chapterStepModel, aggregationStepModel, characterStepModel] =
         await Promise.all([
-          resolveStep(analysisSettings.chapterModel),
-          resolveStep(analysisSettings.aggregationModel),
-          resolveStep(analysisSettings.characterModel),
+          resolveConfiguredStepModel(analysisSettings.chapterModel),
+          resolveConfiguredStepModel(analysisSettings.aggregationModel),
+          resolveConfiguredStepModel(analysisSettings.characterModel),
         ]);
 
       const onProgress = (progress: AnalysisProgressData) => {
@@ -278,7 +272,6 @@ export function AnalysisDialog({
       setResultSummary,
       setPhaseResult,
       addFailedChapterIds,
-      resolveStep,
       reset,
       setError,
     ],
@@ -287,6 +280,10 @@ export function AnalysisDialog({
   const handleRun = useCallback(async () => {
     if (!provider || !chatSettings?.modelId) {
       toast.error("Vui lòng cấu hình nhà cung cấp AI trong Cài đặt trước.");
+      return;
+    }
+    if (isWebGpuInferenceProvider(provider)) {
+      toast.error(WEBGPU_BLOCKED_FOR_API_INFERENCE_VI);
       return;
     }
 
@@ -318,6 +315,10 @@ export function AnalysisDialog({
 
   const handleRetry = useCallback(async () => {
     if (!provider || !chatSettings?.modelId) return;
+    if (isWebGpuInferenceProvider(provider)) {
+      toast.error(WEBGPU_BLOCKED_FOR_API_INFERENCE_VI);
+      return;
+    }
 
     const currentPhaseResults = useAnalysisStore.getState().phaseResults;
     const currentFailedIds = useAnalysisStore.getState().failedChapterIds;

@@ -39,7 +39,10 @@ import {
   setExtensionId,
   setScrapeTimeout,
 } from "@/lib/scraper/extension-bridge";
+import { findNovelBySourceUrl } from "@/lib/scraper/source-url-match";
+import type { ChapterContent, ChapterLink } from "@/lib/scraper/types";
 import { type ScraperStep, useScraperStore } from "@/lib/stores/scraper";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   AlertTriangleIcon,
   ArrowRightIcon,
@@ -51,6 +54,7 @@ import {
   EyeIcon,
   GlobeIcon,
   LibraryIcon,
+  Link2Icon,
   ListChecksIcon,
   LoaderIcon,
   PlusIcon,
@@ -61,7 +65,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -103,6 +107,250 @@ const STEPS: { key: ScraperStep; label: string; icon: React.ElementType }[] = [
   { key: "scraping", label: "Scraping", icon: LoaderIcon },
   { key: "preview", label: "Xem trước", icon: EyeIcon },
 ];
+
+const SCRAPER_SELECT_ROW_H = 40;
+const SCRAPER_SCRAPING_ROW_H = 36;
+
+function VirtualScraperChapterPicker({
+  chapters,
+  selectedChapterUrls,
+  toggleChapter,
+}: {
+  chapters: ChapterLink[];
+  selectedChapterUrls: Set<string>;
+  toggleChapter: (url: string) => void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return chapters;
+    return chapters.filter(
+      (ch) =>
+        ch.title.toLowerCase().includes(q) ||
+        `${ch.order + 1}`.includes(q),
+    );
+  }, [chapters, search]);
+
+  const virtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => SCRAPER_SELECT_ROW_H,
+    overscan: 16,
+    getItemKey: (index) => filtered[index]?.url ?? index,
+  });
+
+  return (
+    <div className="space-y-2">
+      {chapters.length >= 60 && (
+        <Input
+          placeholder="Tìm chương (tiêu đề hoặc số thứ tự)..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-sm"
+        />
+      )}
+      <div
+        ref={parentRef}
+        className="h-[340px] overflow-y-auto overscroll-contain rounded-md border"
+      >
+        {filtered.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+            {chapters.length === 0
+              ? "Không có chương"
+              : "Không có chương khớp tìm kiếm"}
+          </div>
+        ) : (
+          <div
+            className="relative w-full"
+            style={{ height: virtualizer.getTotalSize() }}
+          >
+            {virtualizer.getVirtualItems().map((vi) => {
+              const ch = filtered[vi.index];
+              return (
+                <div
+                  key={ch.url}
+                  className="absolute top-0 left-0 w-full"
+                  style={{
+                    height: vi.size,
+                    transform: `translateY(${vi.start}px)`,
+                  }}
+                >
+                  <label className="flex h-full cursor-pointer items-center gap-3 px-3 py-1.5 transition-colors hover:bg-muted/60">
+                    <Checkbox
+                      checked={selectedChapterUrls.has(ch.url)}
+                      onCheckedChange={() => toggleChapter(ch.url)}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {ch.title}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground/50">
+                      {ch.order + 1}
+                    </span>
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VirtualScrapingChapterRows({ chapters }: { chapters: ChapterContent[] }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: chapters.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => SCRAPER_SCRAPING_ROW_H,
+    overscan: 20,
+    getItemKey: (index) => index,
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      className="h-[240px] overflow-y-auto overscroll-contain rounded-md border"
+    >
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((vi) => {
+          const ch = chapters[vi.index];
+          return (
+            <div
+              key={vi.key}
+              className="absolute top-0 left-0 w-full"
+              style={{
+                height: vi.size,
+                transform: `translateY(${vi.start}px)`,
+              }}
+            >
+              <div
+                className={`flex h-full items-center gap-2 px-2.5 py-1.5 text-xs ${
+                  ch.warning ? "bg-amber-50/50 dark:bg-amber-950/10" : ""
+                }`}
+              >
+                <span className="w-5 shrink-0 text-right tabular-nums text-muted-foreground/40">
+                  {vi.index + 1}
+                </span>
+                {ch.warning ? (
+                  <AlertTriangleIcon className="size-3 shrink-0 text-amber-500" />
+                ) : (
+                  <CheckIcon className="size-3 shrink-0 text-green-500" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {ch.title}
+                </span>
+                <span className="shrink-0 tabular-nums text-muted-foreground/40">
+                  {ch.content.length.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VirtualPreviewChapterRows({
+  chapters,
+  retryingIndex,
+  onRetry,
+}: {
+  chapters: ChapterContent[];
+  retryingIndex: number | null;
+  onRetry: (index: number) => void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: chapters.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 96,
+    overscan: 8,
+    getItemKey: (index) => index,
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      className="h-[280px] overflow-y-auto overscroll-contain rounded-md border"
+    >
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((vi) => {
+          const ch = chapters[vi.index];
+          const plainText = stripHtml(ch.content);
+          const words = countWords(plainText);
+          return (
+            <div
+              key={vi.key}
+              data-index={vi.index}
+              ref={virtualizer.measureElement}
+              className="absolute top-0 left-0 w-full px-2.5 py-2"
+              style={{ transform: `translateY(${vi.start}px)` }}
+            >
+              <div
+                className={`rounded-md transition-colors hover:bg-muted/40 ${
+                  ch.warning ? "bg-amber-50/50 dark:bg-amber-950/10" : ""
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-px w-6 shrink-0 text-right tabular-nums text-[10px] text-muted-foreground/40">
+                    {vi.index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm leading-snug font-medium">
+                      {ch.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                      {plainText.slice(0, 120)}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground/50">
+                        {words.toLocaleString()} từ
+                      </span>
+                      {ch.warning && (
+                        <>
+                          <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                            <AlertTriangleIcon className="size-2.5" />
+                            Nội dung ngắn
+                          </span>
+                          {retryingIndex === vi.index ? (
+                            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                              <LoaderIcon className="size-2.5 animate-spin" />
+                              Đang thử lại...
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onRetry(vi.index)}
+                              disabled={retryingIndex !== null}
+                              className="flex items-center gap-0.5 text-[10px] text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+                            >
+                              <RefreshCwIcon className="size-2.5" />
+                              Thử lại
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ─── Main ──────────────────────────────────────────────────
 
@@ -522,27 +770,11 @@ function SelectStep() {
           </div>
         </div>
 
-        <ScrollArea className="h-[340px]">
-          <div className="space-y-px pr-4">
-            {novelInfo.chapters.map((ch) => (
-              <label
-                key={ch.url}
-                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-1.5 transition-colors hover:bg-muted/60"
-              >
-                <Checkbox
-                  checked={selectedChapterUrls.has(ch.url)}
-                  onCheckedChange={() => toggleChapter(ch.url)}
-                />
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {ch.title}
-                </span>
-                <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground/50">
-                  {ch.order + 1}
-                </span>
-              </label>
-            ))}
-          </div>
-        </ScrollArea>
+        <VirtualScraperChapterPicker
+          chapters={novelInfo.chapters}
+          selectedChapterUrls={selectedChapterUrls}
+          toggleChapter={toggleChapter}
+        />
 
         <div className="flex justify-between pt-1">
           <Button variant="ghost" size="sm" onClick={() => setStep("url")}>
@@ -607,33 +839,7 @@ function ScrapingStep() {
 
         {/* Live chapter results */}
         {scrapedChapters.length > 0 && (
-          <ScrollArea className="h-[240px]">
-            <div className="space-y-px pr-4">
-              {scrapedChapters.map((ch, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs ${
-                    ch.warning ? "bg-amber-50/50 dark:bg-amber-950/10" : ""
-                  }`}
-                >
-                  <span className="w-5 shrink-0 text-right tabular-nums text-muted-foreground/40">
-                    {i + 1}
-                  </span>
-                  {ch.warning ? (
-                    <AlertTriangleIcon className="size-3 shrink-0 text-amber-500" />
-                  ) : (
-                    <CheckIcon className="size-3 shrink-0 text-green-500" />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                    {ch.title}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-muted-foreground/40">
-                    {ch.content.length.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+          <VirtualScrapingChapterRows chapters={scrapedChapters} />
         )}
 
         {error && (
@@ -688,6 +894,24 @@ function PreviewStep({ router }: { router: ReturnType<typeof useRouter> }) {
   );
   const [isImporting, setIsImporting] = useState(false);
 
+  const novelMatchedBySourceUrl = useMemo(
+    () => findNovelBySourceUrl(novels, url),
+    [novels, url],
+  );
+  const sourceUrlLinkAppliedRef = useRef(false);
+
+  useEffect(() => {
+    sourceUrlLinkAppliedRef.current = false;
+  }, [url]);
+
+  useEffect(() => {
+    if (sourceUrlLinkAppliedRef.current) return;
+    if (!novelMatchedBySourceUrl) return;
+    setMode("existing");
+    setSelectedNovelId(novelMatchedBySourceUrl.id);
+    sourceUrlLinkAppliedRef.current = true;
+  }, [novelMatchedBySourceUrl]);
+
   const totalWords = scrapedChapters.reduce(
     (sum, ch) => sum + countWords(stripHtml(ch.content)),
     0,
@@ -720,6 +944,9 @@ function PreviewStep({ router }: { router: ReturnType<typeof useRouter> }) {
               description: novelDescription.trim(),
               sourceUrl: url,
               author: novelInfo?.author,
+              ...(novelInfo?.coverImage
+                ? { coverImage: novelInfo.coverImage }
+                : {}),
               createdAt: now,
               updatedAt: now,
             });
@@ -748,6 +975,9 @@ function PreviewStep({ router }: { router: ReturnType<typeof useRouter> }) {
             await db.novels.update(selectedNovelId, {
               sourceUrl: url,
               updatedAt: now,
+              ...(novelInfo?.coverImage
+                ? { coverImage: novelInfo.coverImage }
+                : {}),
             });
             await insertChapters(selectedNovelId, startOrder, now);
           },
@@ -825,6 +1055,20 @@ function PreviewStep({ router }: { router: ReturnType<typeof useRouter> }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {novelMatchedBySourceUrl &&
+          mode === "existing" &&
+          selectedNovelId === novelMatchedBySourceUrl.id && (
+            <div className="flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-foreground">
+              <Link2Icon className="mt-0.5 size-3.5 shrink-0 text-primary" />
+              <span>
+                Đã khớp{" "}
+                <span className="font-medium">link nguồn</span> với truyện có
+                sẵn «{novelMatchedBySourceUrl.title}» — có thể thêm chương vào
+                đây hoặc chuyển sang «Tạo truyện mới».
+              </span>
+            </div>
+          )}
+
         {/* Mode tabs */}
         <div className="flex rounded-lg bg-muted p-1">
           <button
@@ -898,65 +1142,11 @@ function PreviewStep({ router }: { router: ReturnType<typeof useRouter> }) {
           </div>
         )}
 
-        {/* Chapter list */}
-        <ScrollArea className="h-[280px]">
-          <div className="space-y-1 pr-4">
-            {scrapedChapters.map((ch, i) => {
-              const plainText = stripHtml(ch.content);
-              const words = countWords(plainText);
-              return (
-                <div
-                  key={i}
-                  className={`group flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors hover:bg-muted/40 ${
-                    ch.warning ? "bg-amber-50/50 dark:bg-amber-950/10" : ""
-                  }`}
-                >
-                  <span className="mt-px w-6 shrink-0 text-right tabular-nums text-[10px] text-muted-foreground/40">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm leading-snug font-medium">
-                      {ch.title}
-                    </p>
-                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                      {plainText.slice(0, 120)}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground/50">
-                        {words.toLocaleString()} từ
-                      </span>
-                      {ch.warning && (
-                        <>
-                          <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                            <AlertTriangleIcon className="size-2.5" />
-                            Nội dung ngắn
-                          </span>
-                          {retryingIndex === i ? (
-                            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                              <LoaderIcon className="size-2.5 animate-spin" />
-                              Đang thử lại...
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                useScraperStore.getState().retryScrapeChapter(i)
-                              }
-                              disabled={retryingIndex !== null}
-                              className="flex items-center gap-0.5 text-[10px] text-primary hover:underline disabled:opacity-50 disabled:no-underline"
-                            >
-                              <RefreshCwIcon className="size-2.5" />
-                              Thử lại
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+        <VirtualPreviewChapterRows
+          chapters={scrapedChapters}
+          retryingIndex={retryingIndex}
+          onRetry={(i) => useScraperStore.getState().retryScrapeChapter(i)}
+        />
 
         <div className="flex justify-between pt-1">
           <Button

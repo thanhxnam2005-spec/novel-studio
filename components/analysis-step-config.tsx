@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -22,8 +22,9 @@ import {
 import {
   useAnalysisSettings,
   updateAnalysisSettings,
-  useAIProviders,
   useAIModels,
+  useApiInferenceProviders,
+  useClearWebGpuStepModel,
 } from "@/lib/hooks";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounce";
 import type { StepModelConfig } from "@/lib/db";
@@ -50,9 +51,14 @@ function InlineModelPicker({
 }) {
   const settings = useAnalysisSettings();
   const value = settings[modelKey] as StepModelConfig | undefined;
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const selectedProviderId = value?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);
+
+  const clearWebGpu = useCallback(() => {
+    updateAnalysisSettings({ [modelKey]: undefined });
+  }, [modelKey]);
+  useClearWebGpuStepModel(value?.providerId, clearWebGpu);
 
   const handleProviderChange = (providerId: string) => {
     if (!providerId) {

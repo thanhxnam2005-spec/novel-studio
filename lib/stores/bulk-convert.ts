@@ -9,6 +9,8 @@ export type ChapterConvertStatus =
 export interface ConvertChapterResult {
   chapterId: string;
   chapterTitle: string;
+  /** Set when the chapter had a non-empty title and QT convert was applied */
+  convertedChapterTitle?: string;
   originalLineCount: number;
   convertedLineCount: number;
   scenes: { sceneId: string; content: string }[];

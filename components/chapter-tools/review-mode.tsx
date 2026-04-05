@@ -8,7 +8,11 @@ import { useChapterTools } from "@/lib/stores/chapter-tools";
 import { useAnalysisSettings, useChatSettings, useAIProvider } from "@/lib/hooks";
 import { resolveChapterToolPrompts, DEFAULT_REVIEW_SYSTEM } from "@/lib/chapter-tools/prompts";
 import { buildMinimalContext } from "@/lib/chapter-tools/context";
-import { resolveChapterToolModel, runChapterToolStream } from "@/lib/chapter-tools/stream-runner";
+import {
+  getChapterToolModelMissingMessage,
+  resolveChapterToolModel,
+  runChapterToolStream,
+} from "@/lib/chapter-tools/stream-runner";
 import { ToolConfig } from "./tool-config";
 import { StreamingDisplay } from "./streaming-display";
 
@@ -46,7 +50,7 @@ export function ReviewMode({
     ]);
 
     if (!model) {
-      toast.error("Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.");
+      toast.error(getChapterToolModelMissingMessage(provider));
       return;
     }
 

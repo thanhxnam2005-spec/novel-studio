@@ -24,7 +24,8 @@ import {
   getOrCreateWritingSettings,
   updateWritingSettings,
   useAIModels,
-  useAIProviders,
+  useApiInferenceProviders,
+  useClearWebGpuStepModel,
   useWritingSettings,
 } from "@/lib/hooks";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounce";
@@ -40,7 +41,7 @@ import {
   Settings2Icon,
   SlidersHorizontalIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const SMART_WRITER_MIN_STEPS = 5;
 const SMART_WRITER_MAX_STEPS = 20;
@@ -106,9 +107,14 @@ function StepModelPicker({
   const settings = useWritingSettings(novelId);
   const modelKey = `${role}Model` as const;
   const value = settings?.[modelKey] as StepModelConfig | undefined;
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const selectedProviderId = value?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);
+
+  const clearWebGpu = useCallback(() => {
+    updateWritingSettings(novelId, { [modelKey]: undefined });
+  }, [novelId, modelKey]);
+  useClearWebGpuStepModel(value?.providerId, clearWebGpu);
 
   const handleProviderChange = (providerId: string) => {
     if (!providerId) {

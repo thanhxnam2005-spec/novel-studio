@@ -18,8 +18,9 @@ import { toast } from "sonner";
 import {
   useAnalysisSettings,
   updateAnalysisSettings,
-  useAIProviders,
   useAIModels,
+  useApiInferenceProviders,
+  useClearWebGpuStepModel,
 } from "@/lib/hooks";
 import type { StepModelConfig, AnalysisSettings } from "@/lib/db";
 
@@ -44,7 +45,7 @@ export function ToolConfig({
   const settings = useAnalysisSettings();
   const [isOpen, setIsOpen] = useState(false);
 
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const currentModel = settings[modelKey] as StepModelConfig | undefined;
   const selectedProviderId = currentModel?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);
@@ -70,6 +71,11 @@ export function ToolConfig({
     },
     [modelKey],
   );
+
+  const clearWebGpu = useCallback(async () => {
+    await saveModel(undefined);
+  }, [saveModel]);
+  useClearWebGpuStepModel(currentModel?.providerId, clearWebGpu);
 
   const savePrompt = useCallback(
     async (text: string) => {

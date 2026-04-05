@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -22,8 +22,9 @@ import {
 import {
   useAnalysisSettings,
   updateAnalysisSettings,
-  useAIProviders,
   useAIModels,
+  useApiInferenceProviders,
+  useClearWebGpuStepModel,
 } from "@/lib/hooks";
 import type { StepModelConfig } from "@/lib/db";
 
@@ -60,9 +61,12 @@ function StepModelSelector({
   value: StepModelConfig | undefined;
   onChange: (value: StepModelConfig | undefined) => void;
 }) {
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const selectedProviderId = value?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);
+
+  const clearWebGpu = useCallback(() => onChange(undefined), [onChange]);
+  useClearWebGpuStepModel(value?.providerId, clearWebGpu);
 
   const handleProviderChange = (providerId: string) => {
     if (!providerId) {

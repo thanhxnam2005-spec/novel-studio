@@ -25,15 +25,19 @@ import {
 } from "@/lib/chapter-tools/bulk-translate";
 import type { ContextDepth } from "@/lib/chapter-tools/context";
 import { DEFAULT_TRANSLATE_SYSTEM } from "@/lib/chapter-tools/prompts";
-import { resolveChapterToolModel } from "@/lib/chapter-tools/stream-runner";
+import {
+  getChapterToolModelMissingMessage,
+  resolveChapterToolModel,
+} from "@/lib/chapter-tools/stream-runner";
 import type { AnalysisSettings, Chapter, StepModelConfig } from "@/lib/db";
 import {
   updateAnalysisSettings,
   useAIModels,
   useAIProvider,
-  useAIProviders,
   useAnalysisSettings,
+  useApiInferenceProviders,
   useChatSettings,
+  useClearWebGpuStepModel,
   useConfirmInterrupt,
 } from "@/lib/hooks";
 import { useBulkTranslateStore } from "@/lib/stores/bulk-translate";
@@ -137,7 +141,7 @@ export function BulkTranslateDialog({
 
   const settings = useAnalysisSettings();
   const chatSettings = useChatSettings();
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const defaultProvider = useAIProvider(chatSettings?.providerId);
 
   // Model — synced with AnalysisSettings.translateModel
@@ -154,6 +158,11 @@ export function BulkTranslateDialog({
       /* silent */
     }
   }, []);
+
+  const clearWebGpu = useCallback(async () => {
+    await saveModel(undefined);
+  }, [saveModel]);
+  useClearWebGpuStepModel(currentModel?.providerId, clearWebGpu);
 
   const handleProviderChange = (providerId: string) => {
     saveModel(providerId ? { providerId, modelId: "" } : undefined);
@@ -213,7 +222,7 @@ export function BulkTranslateDialog({
       chatSettings,
     );
     if (!model) {
-      toast.error("Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.");
+      toast.error(getChapterToolModelMissingMessage(defaultProvider));
     }
     return model;
   }, [settings.translateModel, defaultProvider, chatSettings]);

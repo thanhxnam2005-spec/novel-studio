@@ -23,15 +23,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "sk-...",
     apiKeyHelpUrl: "https://platform.openai.com/api-keys",
     iconKey: "openai",
-    popularModels: [
-      "gpt-4.1",
-      "gpt-4.1-mini",
-      "gpt-4.1-nano",
-      "gpt-4o",
-      "gpt-4o-mini",
-      "o3",
-      "o4-mini",
-    ],
+    popularModels: [],
   },
   {
     type: "anthropic",
@@ -42,11 +34,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "sk-ant-...",
     apiKeyHelpUrl: "https://console.anthropic.com/settings/keys",
     iconKey: "anthropic",
-    popularModels: [
-      "claude-opus-4-20250514",
-      "claude-sonnet-4-20250514",
-      "claude-haiku-4-20250414",
-    ],
+    popularModels: [],
   },
   {
     type: "google",
@@ -57,7 +45,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "AI...",
     apiKeyHelpUrl: "https://aistudio.google.com/app/apikey",
     iconKey: "google",
-    popularModels: ["gemini-3.1-pro", "gemini-3.1-flash", "gemini-2.0-flash"],
+    popularModels: [],
   },
   {
     type: "groq",
@@ -68,11 +56,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "gsk_...",
     apiKeyHelpUrl: "https://console.groq.com/keys",
     iconKey: "groq",
-    popularModels: [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "mixtral-8x7b-32768",
-    ],
+    popularModels: [],
   },
   {
     type: "mistral",
@@ -83,11 +67,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "...",
     apiKeyHelpUrl: "https://console.mistral.ai/api-keys",
     iconKey: "mistral",
-    popularModels: [
-      "mistral-large-latest",
-      "mistral-medium-latest",
-      "mistral-small-latest",
-    ],
+    popularModels: [],
   },
   {
     type: "xai",
@@ -98,7 +78,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiKeyPlaceholder: "xai-...",
     apiKeyHelpUrl: "https://console.x.ai/",
     iconKey: "xai",
-    popularModels: ["grok-3", "grok-3-mini", "grok-2"],
+    popularModels: [],
   },
   {
     type: "openrouter",

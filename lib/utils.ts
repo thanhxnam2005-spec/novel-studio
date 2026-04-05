@@ -36,14 +36,15 @@ export function markdownToHtml(md: string): string {
 /**
  * Strips all HTML tags, decodes basic HTML entities, and extracts text content from HTML or Markdown.
  * Handles: tags, common entities, line breaks, inline code, emphasis, links, and basic markdown syntax.
+ * @param preserveLineBreaks When true, keeps paragraph breaks (e.g. scraped chapter body); when false, one compact line (titles, UI).
  */
-export function sanitizeText(text: string): string {
+export function sanitizeText(text: string, preserveLineBreaks = false): string {
   if (!text) return "";
   let output = text;
 
-  output = output.replace(/<br\s*\/?>/gi, " ");
+  output = output.replace(/<br\s*\/?>/gi, preserveLineBreaks ? "\n" : " ");
   output = output.replace(
-    /<\/(p|div|li|h\d|tr|section|article|ul|ol|table)>/gi,
+    /<\/(p|div|li|h\d|tr|section|article|ul|ol|table|center|blockquote|pre)>/gi,
     "\n",
   );
   output = output.replace(/<[^>]+>/g, "");
@@ -63,6 +64,17 @@ export function sanitizeText(text: string): string {
     .replace(/`([^`]+)`/g, "$1");
 
   output = output.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+  if (preserveLineBreaks) {
+    output = output
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n");
+    output = output.replace(/\n{3,}/g, "\n\n");
+    output = output.replace(/[ \t]+/g, " ");
+    output = output.replace(/ *\n */g, "\n");
+    return output.trim();
+  }
 
   output = output
     .split("\n")

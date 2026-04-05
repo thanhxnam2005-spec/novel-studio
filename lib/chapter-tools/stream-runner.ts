@@ -1,10 +1,23 @@
 import { streamText } from "ai";
 import type { LanguageModel } from "ai";
 import { toast } from "sonner";
+import {
+  WEBGPU_BLOCKED_FOR_API_INFERENCE_VI,
+  isWebGpuInferenceProvider,
+} from "@/lib/ai/api-inference";
 import { getModel } from "@/lib/ai/provider";
 import { resolveStep } from "@/lib/ai/resolve-step";
 import type { StepModelConfig, AIProvider, ChatSettings } from "@/lib/db";
 import { useChapterTools } from "@/lib/stores/chapter-tools";
+
+export function getChapterToolModelMissingMessage(
+  provider: AIProvider | undefined,
+): string {
+  if (isWebGpuInferenceProvider(provider)) {
+    return WEBGPU_BLOCKED_FOR_API_INFERENCE_VI;
+  }
+  return "Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.";
+}
 
 /**
  * Resolve a per-mode model or fall back to the default chat model.
@@ -17,6 +30,7 @@ export async function resolveChapterToolModel(
   const stepModel = await resolveStep(stepConfig);
   if (stepModel) return stepModel;
   if (provider && chatSettings?.modelId) {
+    if (isWebGpuInferenceProvider(provider)) return null;
     return await getModel(provider, chatSettings.modelId);
   }
   return null;

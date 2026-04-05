@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { updateChapter } from "@/lib/hooks/use-chapters";
+import { getConvertSettings } from "@/lib/hooks/use-convert-settings";
 import { getMergedNameDict } from "@/lib/hooks/use-name-entries";
 import { convertText } from "@/lib/hooks/use-qt-engine";
 import {
@@ -60,8 +62,8 @@ export async function runBulkConvert(opts: BulkConvertOptions): Promise<void> {
     scenes.sort((a, b) => a.order - b.order);
   }
 
-  // Get merged name dict
   const nameDict = await getMergedNameDict(novelId);
+  const convertOptions = await getConvertSettings();
 
   // Process each chapter
   for (const chapterId of chapterIds) {
@@ -94,10 +96,18 @@ export async function runBulkConvert(opts: BulkConvertOptions): Promise<void> {
         .join(`\n${SCENE_BREAK}\n`);
       const originalLineCount = joinedContent.split("\n").length;
 
-      // Convert
       const result = await convertText(joinedContent, {
         novelNames: nameDict,
       });
+
+      let convertedChapterTitle: string | undefined;
+      if (chapter.title.trim()) {
+        const titleResult = await convertText(chapter.title, {
+          novelNames: nameDict,
+          options: convertOptions,
+        });
+        convertedChapterTitle = titleResult.plainText.trim();
+      }
 
       // Split back to scenes
       const convertedParts = result.plainText.split(SCENE_BREAK);
@@ -111,6 +121,7 @@ export async function runBulkConvert(opts: BulkConvertOptions): Promise<void> {
       const chapterResult: ConvertChapterResult = {
         chapterId,
         chapterTitle: chapter.title,
+        convertedChapterTitle,
         originalLineCount,
         convertedLineCount,
         scenes: sceneResults,
@@ -153,6 +164,12 @@ async function saveConvertResult(
       scene.content,
     );
     await updateScene(scene.sceneId, { content: scene.content });
+  }
+
+  if (result.convertedChapterTitle !== undefined) {
+    await updateChapter(result.chapterId, {
+      title: result.convertedChapterTitle,
+    });
   }
 }
 

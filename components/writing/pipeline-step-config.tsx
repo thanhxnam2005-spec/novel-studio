@@ -17,14 +17,15 @@ import {
   getOrCreateWritingSettings,
   updateWritingSettings,
   useAIModels,
-  useAIProviders,
+  useApiInferenceProviders,
+  useClearWebGpuStepModel,
   useWritingSettings,
 } from "@/lib/hooks";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounce";
 import { useWritingPipelineStore } from "@/lib/stores/writing-pipeline";
 import { getDefaultPrompt } from "@/lib/writing/prompts";
 import { ChevronDownIcon, RotateCcwIcon } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 function PipelineStepModelPicker({
   novelId,
@@ -36,7 +37,7 @@ function PipelineStepModelPicker({
   const settings = useWritingSettings(novelId);
   const modelKey = `${role}Model` as const;
   const value = settings?.[modelKey] as StepModelConfig | undefined;
-  const providers = useAIProviders();
+  const providers = useApiInferenceProviders();
   const selectedProviderId = value?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);
 
@@ -44,6 +45,14 @@ function PipelineStepModelPicker({
     await getOrCreateWritingSettings(novelId);
     await updateWritingSettings(novelId, data);
   };
+
+  const clearWebGpu = useCallback(() => {
+    void (async () => {
+      await getOrCreateWritingSettings(novelId);
+      await updateWritingSettings(novelId, { [modelKey]: undefined });
+    })();
+  }, [novelId, modelKey]);
+  useClearWebGpuStepModel(value?.providerId, clearWebGpu);
 
   return (
     <div className="grid gap-2 grid-cols-2">

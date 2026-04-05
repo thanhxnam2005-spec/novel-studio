@@ -12,18 +12,27 @@ const OPTION_KEYS = Object.keys(
   DEFAULT_CONVERT_OPTIONS,
 ) as (keyof ConvertOptions)[];
 
+function mergeConvertSettingsRow(
+  row: Awaited<ReturnType<typeof db.convertSettings.get>>,
+): Required<ConvertOptions> {
+  if (!row) return DEFAULT_CONVERT_OPTIONS;
+  const result = {} as Record<string, unknown>;
+  for (const key of OPTION_KEYS) {
+    result[key] =
+      row[key as keyof typeof row] ?? DEFAULT_CONVERT_OPTIONS[key];
+  }
+  return result as Required<ConvertOptions>;
+}
+
 export function useConvertSettings(): Required<ConvertOptions> {
   const row = useLiveQuery(() => db.convertSettings.get(SINGLETON_ID), []);
 
-  return useMemo(() => {
-    if (!row) return DEFAULT_CONVERT_OPTIONS;
-    const result = {} as Record<string, unknown>;
-    for (const key of OPTION_KEYS) {
-      result[key] =
-        row[key as keyof typeof row] ?? DEFAULT_CONVERT_OPTIONS[key];
-    }
-    return result as Required<ConvertOptions>;
-  }, [row]);
+  return useMemo(() => mergeConvertSettingsRow(row), [row]);
+}
+
+export async function getConvertSettings(): Promise<Required<ConvertOptions>> {
+  const row = await db.convertSettings.get(SINGLETON_ID);
+  return mergeConvertSettingsRow(row);
 }
 
 export async function updateConvertSettings(

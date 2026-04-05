@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { detectAdapter } from "../scraper/adapters";
-import { scrapeChapters } from "../scraper/engine";
+import {
+  sanitizeChapterContent,
+  scrapeChapters,
+  type ScrapeDebugEntry,
+} from "../scraper/engine";
 import { extensionFetch, checkExtensionStatus } from "../scraper/extension-bridge";
+import { novelIndexDebugSummary } from "../scraper/novel-page-diagnostics";
 import type {
   ChapterContent,
   NovelInfo,
@@ -75,6 +80,30 @@ function addLog(label: string, data: unknown) {
   useScraperStore.setState({ debugLogs: [...prev, log] });
 }
 
+function logChapterIssue(entry: ScrapeDebugEntry) {
+  const issue =
+    entry.timedOut ||
+    !!entry.parsed.warning ||
+    entry.parsed.content.length < 100;
+  if (!issue) return;
+
+  addLog("Scrape · chapter issue", {
+    title: entry.chapterTitle,
+    url: entry.url,
+    len: entry.parsed.content.length,
+    htmlLen: entry.htmlLength,
+    timedOut: entry.timedOut,
+    ctLen: entry.contentTextLength,
+    warning: entry.parsed.warning ?? null,
+    wait: entry.waitSelector ?? null,
+    click: entry.clickSelector ?? null,
+  });
+  if (entry.extensionLogs?.length) {
+    const tail = entry.extensionLogs.slice(-4).join(" | ");
+    addLog("Scrape · chapter · ext tail", tail);
+  }
+}
+
 export const useScraperStore = create<ScraperState>((set, get) => ({
   ...initialState,
 
@@ -103,19 +132,27 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
 
     set({ isLoading: true, error: null, debugLogs: [] });
     try {
-      addLog("Fetching", url);
-      const { html, logs } = await extensionFetch(url);
-      if (logs?.length) addLog("Extension", logs.join("\n"));
+      const { html, timedOut } = await extensionFetch(url);
       const novelInfo = adapter.getNovelInfo(html, url);
 
-      addLog("NovelInfo", {
+      addLog("Scrape · index", {
+        ok: true,
+        url,
+        adapter: adapter.name,
         title: novelInfo.title,
-        author: novelInfo.author,
-        chapterCount: novelInfo.chapters.length,
+        chapters: novelInfo.chapters.length,
+        cover: Boolean(novelInfo.coverImage),
+        htmlLen: html.length,
+        timedOut: timedOut ?? false,
       });
 
       if (novelInfo.chapters.length === 0) {
-        addLog("⚠ No chapters found", "Kiểm tra adapter hoặc URL");
+        addLog("Scrape · index · no chapters", {
+          url,
+          adapter: adapter.name,
+          title: novelInfo.title,
+          probe: novelIndexDebugSummary(html, url),
+        });
         set({ error: "Không tìm thấy chương nào", isLoading: false });
         return;
       }
@@ -131,7 +168,7 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
         step: "select",
       });
     } catch (err) {
-      addLog("✗ Error", err instanceof Error ? err.message : String(err));
+      addLog("Scrape · index · error", err instanceof Error ? err.message : String(err));
       set({
         error:
           err instanceof Error ? err.message : "Lỗi khi lấy thông tin truyện",
@@ -188,12 +225,7 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
           const prev = get().scrapedChapters;
           set({ scrapedChapters: [...prev, entry.parsed] });
 
-          const info: Record<string, unknown> = {
-            len: entry.parsed.content.length,
-          };
-          if (entry.parsed.warning) info.warning = entry.parsed.warning;
-          if (entry.extensionLogs?.length) info.ext = entry.extensionLogs.join("\n");
-          addLog(`Ch: ${entry.chapterTitle}`, info);
+          logChapterIssue(entry);
         },
       );
 
@@ -207,6 +239,7 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
         set({ isLoading: false, error: "Đã hủy scraping", abortController: null });
         return;
       }
+      addLog("Scrape · batch · error", err instanceof Error ? err.message : String(err));
       set({
         error: err instanceof Error ? err.message : "Lỗi khi scrape",
         isLoading: false,
@@ -225,27 +258,38 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
     if (!chapterLink) return;
 
     set({ retryingIndex: index });
-    addLog(`Retry: ${chapterLink.title}`, "Re-scraping...");
     try {
-      const { html, contentText } = await extensionFetch(
+      const { html, contentText, timedOut, logs } = await extensionFetch(
         chapterLink.url,
         adapter.chapterWaitSelector,
         adapter.chapterClickSelector,
       );
-      const content = adapter.getChapterContent(html, chapterLink.url, contentText);
-      if (content.content.length < 1000) {
+      const content = sanitizeChapterContent(
+        adapter.getChapterContent(html, chapterLink.url, contentText),
+      );
+      if (timedOut) {
+        content.warning = `Timeout — nội dung chưa load được (${content.content.length} ký tự)`;
+      } else if (content.content.length < 1000) {
         content.warning = `Nội dung quá ngắn (${content.content.length} ký tự) — có thể chưa load được`;
       }
       const updated = [...scrapedChapters];
       updated[index] = content;
       set({ scrapedChapters: updated, retryingIndex: null });
-      addLog(`Retry: ${chapterLink.title}`, {
-        len: content.content.length,
-        warning: content.warning || null,
+
+      logChapterIssue({
+        chapterTitle: chapterLink.title,
+        url: chapterLink.url,
+        htmlLength: html.length,
+        parsed: content,
+        extensionLogs: logs,
+        timedOut: timedOut ?? false,
+        contentTextLength: contentText?.length ?? 0,
+        waitSelector: adapter.chapterWaitSelector,
+        clickSelector: adapter.chapterClickSelector,
       });
     } catch (err) {
       set({ retryingIndex: null });
-      addLog(`Retry failed: ${chapterLink.title}`, err instanceof Error ? err.message : String(err));
+      addLog("Scrape · retry · error", err instanceof Error ? err.message : String(err));
     }
   },
 

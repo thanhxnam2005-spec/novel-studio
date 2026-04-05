@@ -1,5 +1,14 @@
+import { sanitizeText } from "../utils";
 import { extensionFetch } from "./extension-bridge";
 import type { ChapterContent, ChapterLink, SiteAdapter } from "./types";
+
+export function sanitizeChapterContent(c: ChapterContent): ChapterContent {
+  return {
+    ...c,
+    title: sanitizeText(c.title),
+    content: sanitizeText(c.content, true),
+  };
+}
 
 export interface ScrapeDebugEntry {
   chapterTitle: string;
@@ -7,6 +16,10 @@ export interface ScrapeDebugEntry {
   htmlLength: number;
   parsed: ChapterContent;
   extensionLogs?: string[];
+  timedOut: boolean;
+  contentTextLength: number;
+  waitSelector?: string;
+  clickSelector?: string;
 }
 
 /**
@@ -32,7 +45,9 @@ export async function scrapeChapters(
       adapter.chapterWaitSelector,
       adapter.chapterClickSelector,
     );
-    const content = adapter.getChapterContent(html, chapter.url, contentText);
+    const content = sanitizeChapterContent(
+      adapter.getChapterContent(html, chapter.url, contentText),
+    );
     if (timedOut) {
       content.warning = `Timeout — nội dung chưa load được (${content.content.length} ký tự)`;
     } else if (content.content.length < 1000) {
@@ -46,9 +61,12 @@ export async function scrapeChapters(
       htmlLength: html.length,
       parsed: content,
       extensionLogs: logs,
+      timedOut: timedOut ?? false,
+      contentTextLength: contentText?.length ?? 0,
+      waitSelector: adapter.chapterWaitSelector,
+      clickSelector: adapter.chapterClickSelector,
     });
 
-    // Stop if 3 consecutive chapters have warnings
     if (results.length >= 3) {
       const lastThree = results.slice(-3);
       if (lastThree.every((ch) => ch.warning)) {

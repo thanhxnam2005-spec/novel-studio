@@ -17,7 +17,11 @@ import { useChapterTools } from "@/lib/stores/chapter-tools";
 import { useAnalysisSettings, useChatSettings, useAIProvider } from "@/lib/hooks";
 import { resolveChapterToolPrompts, DEFAULT_TRANSLATE_SYSTEM } from "@/lib/chapter-tools/prompts";
 import { buildTranslateContext, type ContextDepth } from "@/lib/chapter-tools/context";
-import { resolveChapterToolModel, runChapterToolStream } from "@/lib/chapter-tools/stream-runner";
+import {
+  getChapterToolModelMissingMessage,
+  resolveChapterToolModel,
+  runChapterToolStream,
+} from "@/lib/chapter-tools/stream-runner";
 import { TITLE_SEPARATOR, parseTranslateResult } from "@/lib/chapter-tools/bulk-translate";
 import { getMergedNameDict } from "@/lib/hooks/use-name-entries";
 import { ToolConfig } from "./tool-config";
@@ -109,7 +113,7 @@ export function TranslateMode({
     setHasContext(context !== null);
 
     if (!model) {
-      toast.error("Vui lòng cấu hình nhà cung cấp AI trong Cài đặt.");
+      toast.error(getChapterToolModelMissingMessage(provider));
       return;
     }
 
@@ -154,7 +158,20 @@ export function TranslateMode({
     });
 
     toast.success("Đã áp dụng bản dịch");
-  }, [content, novelId, chapterOrder, chapterTitle, depth, translateTitle, settings, provider, chatSettings, onTranslated, clearResult]);
+  }, [
+    content,
+    novelId,
+    chapterOrder,
+    chapterTitle,
+    depth,
+    translateTitle,
+    useNameDict,
+    settings,
+    provider,
+    chatSettings,
+    onTranslated,
+    clearResult,
+  ]);
 
   const showConfig = !isStreaming && !summary;
 

@@ -6,6 +6,7 @@ export * from "./use-scene-versions";
 export * from "./use-characters";
 export * from "./use-notes";
 export * from "./use-ai-providers";
+export * from "./use-clear-webgpu-step-model";
 export * from "./use-conversations";
 export * from "./use-chat-settings";
 export * from "./use-analysis-settings";
