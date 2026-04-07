@@ -32,13 +32,19 @@ import { useCallback, useEffect, useState } from "react";
 function PipelineStepModelPicker({
   novelId,
   role,
+  modelKeyOverride,
 }: {
   novelId: string;
   role: WritingAgentRole;
+  modelKeyOverride?: string;
 }) {
   const settings = useWritingSettings(novelId);
-  const modelKey = `${role}Model` as const;
-  const value = settings?.[modelKey] as StepModelConfig | undefined;
+  const globalSettings = useWritingSettings(GLOBAL_DEFAULT_ID);
+  const modelKey = (modelKeyOverride ?? `${role}Model`) as keyof typeof settings & string;
+  // Novel-specific → global default
+  const novelValue = settings?.[modelKey] as StepModelConfig | undefined;
+  const globalValue = globalSettings?.[modelKey] as StepModelConfig | undefined;
+  const value = novelValue ?? globalValue;
   const providers = useApiInferenceProviders();
   const selectedProviderId = value?.providerId ?? "";
   const models = useAIModels(selectedProviderId || undefined);

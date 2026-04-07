@@ -197,6 +197,13 @@ async function getModelForRole(
     const model = await resolveStep(stepConfig);
     if (model) return model;
   }
+  // Fallback to global default settings
+  const globalSettings = await db.writingSettings.get("global-default");
+  const globalConfig = globalSettings?.[stepModelKey];
+  if (globalConfig) {
+    const model = await resolveStep(globalConfig);
+    if (model) return model;
+  }
   const chatSettings = await db.chatSettings.get("default");
   if (chatSettings?.providerId && chatSettings?.modelId) {
     const model = await resolveStep({
