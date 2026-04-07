@@ -21,6 +21,8 @@ import {
   useClearWebGpuStepModel,
   useWritingSettings,
 } from "@/lib/hooks";
+
+const GLOBAL_DEFAULT_ID = "global-default";
 import { useDebouncedCallback } from "@/lib/hooks/use-debounce";
 import { useWritingPipelineStore } from "@/lib/stores/writing-pipeline";
 import { getDefaultPrompt } from "@/lib/writing/prompts";
@@ -126,6 +128,7 @@ export function PipelineStepConfig({
   defaultPromptOverride?: string;
 }) {
   const settings = useWritingSettings(novelId);
+  const globalSettings = useWritingSettings(GLOBAL_DEFAULT_ID);
   const promptKey = (promptKeyOverride ?? `${role}Prompt`) as keyof typeof settings & string;
   const defaultPrompt = defaultPromptOverride ?? getDefaultPrompt(role);
   const isCustom = !!(settings?.[promptKey] as string | undefined);
@@ -146,8 +149,11 @@ export function PipelineStepConfig({
 
   const [systemOpen, setSystemOpen] = useState(false);
 
+  // Novel-specific → global default → hardcoded default
   const displayPrompt =
-    (settings?.[promptKey] as string | undefined) ?? defaultPrompt;
+    (settings?.[promptKey] as string | undefined) ??
+    (globalSettings?.[promptKey] as string | undefined) ??
+    defaultPrompt;
 
   const [promptText, setPromptText] = useState(displayPrompt);
   useEffect(() => {

@@ -173,9 +173,13 @@ export function SetupWizard({
     abortRef.current = controller;
 
     const ws = await getOrCreateWritingSettings(novelId);
+    const globalWs = await db.writingSettings.get("global-default");
     const promptKey = SETUP_PROMPT_KEYS[currentStep] as keyof WritingSettings;
-    // Only pass systemPrompt if user has customized it; otherwise let auto-generate use its own defaults
-    const systemPrompt = (ws[promptKey] as string | undefined) ?? undefined;
+    // Novel-specific → global default → undefined (lets auto-generate use hardcoded defaults)
+    const systemPrompt =
+      (ws[promptKey] as string | undefined) ??
+      (globalWs?.[promptKey] as string | undefined) ??
+      undefined;
     const userInstruction =
       useWritingPipelineStore.getState().stepUserInstructions[
         wizardInstructionKey
