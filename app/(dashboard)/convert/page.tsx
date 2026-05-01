@@ -59,7 +59,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTrainingStore } from "@/lib/stores/training-store";
 import { useBackgroundTraining } from "@/lib/hooks/use-background-training";
-import { DictionaryChecklist } from "@/components/dictionary-checklist";
 import { toast } from "sonner";
 
 export default function ConvertPage() {
@@ -423,10 +422,6 @@ export default function ConvertPage() {
         </div>
       </div>
 
-      {/* ── Dictionary Checklist ── */}
-      <div className="mb-4">
-        <DictionaryChecklist />
-      </div>
 
       {/* ── Side-by-side editor ── */}
       <div ref={scrollContainerRef}>
