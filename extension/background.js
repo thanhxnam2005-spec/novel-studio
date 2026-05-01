@@ -76,14 +76,28 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
   const logs = [];
   const log = (msg) => { logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`); };
 
-  let tabId, windowId, createdTab;
+  let tabId, windowId;
 
   if (isKiwi) {
-    // Kiwi Browser: create a tab (no window API)
-    createdTab = await chrome.tabs.create({ url, active: false });
+    // Kiwi Browser: create tab with active:true so it ACTUALLY navigates
+    const createdTab = await chrome.tabs.create({ url, active: true });
     tabId = createdTab.id;
     windowId = null;
-    log(`tab created (Kiwi mode, background tab)`);
+    log(`tab created (Kiwi mode, active tab, id=${tabId})`);
+
+    // Force navigation in case tab didn't navigate
+    await delay(500);
+    try {
+      const tabInfo = await chrome.tabs.get(tabId);
+      log(`tab url after create: ${tabInfo.url}`);
+      if (!tabInfo.url || tabInfo.url.startsWith("chrome://") || tabInfo.url === "about:blank") {
+        log(`tab stuck on internal URL, forcing navigation...`);
+        await chrome.tabs.update(tabId, { url });
+        log(`forced navigation to ${url}`);
+      }
+    } catch (e) {
+      log(`tab check failed: ${e.message}`);
+    }
   } else {
     // Desktop Chrome: create minimized window
     const win = await chrome.windows.create({ url, state: "minimized" });
@@ -94,7 +108,7 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
 
   try {
     // Wait for the REAL page to load (not chrome://newtab)
-    await waitForTabLoad(tabId, url, 60000);
+    await waitForRealPage(tabId, url, 60000, log);
     log(`page loaded`);
 
     // Anti-bot: simulate human-like delay before interaction
@@ -103,7 +117,15 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
     log(`waited ${Math.round(initialDelay)}ms (anti-bot)`);
 
     // Anti-bot: scroll the page slightly to seem human
-    await injectHumanBehavior(tabId);
+    await safeExecute(tabId, () => {
+      window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
+      const event = new MouseEvent("mousemove", {
+        clientX: Math.floor(Math.random() * window.innerWidth),
+        clientY: Math.floor(Math.random() * window.innerHeight),
+        bubbles: true,
+      });
+      document.dispatchEvent(event);
+    });
     log(`injected human behavior`);
 
     let timedOut = false;
@@ -120,6 +142,7 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
       log(`content stabilized`);
     }
 
+    // Final extraction
     const results = await chrome.scripting.executeScript({
       target: { tabId },
       args: [waitSelector || null],
@@ -160,29 +183,57 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
   }
 }
 
-// ─── Anti-Bot: Human Behavior Simulation ─────────────────────
+// ─── Safe Script Execution ───────────────────────────────────
+// Wraps executeScript with URL check to avoid chrome:// errors
 
-async function injectHumanBehavior(tabId) {
+async function safeExecute(tabId, func, args) {
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        // Simulate slight scroll
-        window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.url && (tab.url.startsWith("chrome://") || tab.url.startsWith("about:") || tab.url.startsWith("edge://"))) {
+      return null; // Skip — can't inject into internal pages
+    }
+  } catch { return null; }
 
-        // Simulate mouse movement
-        const event = new MouseEvent("mousemove", {
-          clientX: Math.floor(Math.random() * window.innerWidth),
-          clientY: Math.floor(Math.random() * window.innerHeight),
-          bubbles: true,
-        });
-        document.dispatchEvent(event);
-      },
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func,
+      args: args || [],
     });
+    return results?.[0]?.result ?? null;
   } catch {
-    // Ignore errors — some pages restrict script injection
+    return null;
   }
-  await delay(300 + Math.random() * 500);
+}
+
+// ─── Wait for Real Page ──────────────────────────────────────
+// Polls until the tab URL is a real website (not chrome://) AND status is complete
+
+async function waitForRealPage(tabId, targetUrl, timeoutMs, log) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+
+      if (tab.url && !tab.url.startsWith("chrome://") && !tab.url.startsWith("about:") && tab.status === "complete") {
+        log(`tab navigated to: ${tab.url.substring(0, 80)}`);
+        return;
+      }
+
+      // If tab is stuck on chrome:// for more than 5 seconds, force navigate
+      if (Date.now() - start > 5000 && tab.url && (tab.url.startsWith("chrome://") || tab.url === "about:blank")) {
+        log(`tab still on ${tab.url}, forcing navigation again...`);
+        await chrome.tabs.update(tabId, { url: targetUrl });
+      }
+    } catch {
+      // Tab might not exist yet
+    }
+
+    await delay(1000);
+  }
+
+  log(`waitForRealPage timeout after ${timeoutMs}ms`);
 }
 
 // ─── Click + Wait with Retry ────────────────────────────────
@@ -195,12 +246,7 @@ async function clickAndWait(tabId, clickSel, waitSel, timeout, log) {
     await robustClick(tabId, clickSel);
     log(`click attempt ${attempt + 1}/${maxRetries}`);
 
-    const timedOut = await waitForSelector(
-      tabId,
-      waitSel,
-      perAttemptTimeout,
-      200,
-    );
+    const timedOut = await waitForSelector(tabId, waitSel, perAttemptTimeout, 200);
 
     if (!timedOut) {
       log(`content loaded after attempt ${attempt + 1}`);
@@ -208,7 +254,6 @@ async function clickAndWait(tabId, clickSel, waitSel, timeout, log) {
     }
 
     log(`attempt ${attempt + 1} timeout — retrying`);
-    // Anti-bot: random delay between retries
     await randomDelay(500, 1500);
   }
 
@@ -219,26 +264,16 @@ async function clickAndWait(tabId, clickSel, waitSel, timeout, log) {
 // ─── Robust Click ────────────────────────────────────────────
 
 async function robustClick(tabId, selector) {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    args: [selector],
-    func: (sel) => {
-      const el = document.querySelector(sel);
-      if (!el) return;
-
-      // Method 1: native click
-      el.click();
-
-      // Method 2: dispatch full mouse event sequence
-      const opts = { bubbles: true, cancelable: true, view: window };
-      el.dispatchEvent(new MouseEvent("mousedown", opts));
-      el.dispatchEvent(new MouseEvent("mouseup", opts));
-      el.dispatchEvent(new MouseEvent("click", opts));
-
-      // Method 3: focus + Enter (for elements that respond to keyboard)
-      if (typeof el.focus === "function") el.focus();
-    },
-  });
+  await safeExecute(tabId, (sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.click();
+    const opts = { bubbles: true, cancelable: true, view: window };
+    el.dispatchEvent(new MouseEvent("mousedown", opts));
+    el.dispatchEvent(new MouseEvent("mouseup", opts));
+    el.dispatchEvent(new MouseEvent("click", opts));
+    if (typeof el.focus === "function") el.focus();
+  }, [selector]);
   await delay(500);
 }
 
@@ -247,25 +282,14 @@ async function robustClick(tabId, selector) {
 async function waitForSelector(tabId, selector, maxWait, minLength) {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
-    try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        args: [selector],
-        func: (sel) => {
-          const el = document.querySelector(sel);
-          if (!el) return 0;
-          const clone = el.cloneNode(true);
-          clone
-            .querySelectorAll("script, style, noscript")
-            .forEach((s) => s.remove());
-          return clone.textContent.trim().length;
-        },
-      });
-      const len = results?.[0]?.result ?? 0;
-      if (len > minLength) return false;
-    } catch {
-      // Tab might not be ready yet, retry
-    }
+    const len = await safeExecute(tabId, (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return 0;
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll("script, style, noscript").forEach((s) => s.remove());
+      return clone.textContent.trim().length;
+    }, [selector]);
+    if (len && len > minLength) return false;
     await delay(500);
   }
   return true;
@@ -279,71 +303,20 @@ async function waitForStableContent(tabId, maxWait) {
   let stableCount = 0;
   await delay(2000);
   while (Date.now() - start < maxWait) {
-    try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          const clone = document.body.cloneNode(true);
-          clone
-            .querySelectorAll("script,style,noscript")
-            .forEach((el) => el.remove());
-          return clone.textContent.trim().length;
-        },
-      });
-      const len = results?.[0]?.result ?? 0;
+    const len = await safeExecute(tabId, () => {
+      const clone = document.body.cloneNode(true);
+      clone.querySelectorAll("script,style,noscript").forEach((el) => el.remove());
+      return clone.textContent.trim().length;
+    });
+    if (len !== null) {
       if (len === lastLength && len > 0) {
         stableCount++;
         if (stableCount >= 2) return;
       } else stableCount = 0;
       lastLength = len;
-    } catch {
-      // Retry
     }
     await delay(500);
   }
-}
-
-// ─── Wait for Tab Load ───────────────────────────────────────
-// On Kiwi Browser, tabs initially load chrome://newtab before navigating.
-// We must wait for the tab to reach the ACTUAL target URL.
-
-function waitForTabLoad(tabId, targetUrl, timeoutMs = 60000) {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-      resolve();
-    }, timeoutMs);
-
-    function isRealUrl(tabUrl) {
-      if (!tabUrl) return false;
-      // Reject chrome:// , about: , edge:// internal pages
-      if (tabUrl.startsWith("chrome://")) return false;
-      if (tabUrl.startsWith("about:")) return false;
-      if (tabUrl.startsWith("edge://")) return false;
-      if (tabUrl.startsWith("chrome-extension://")) return false;
-      return true;
-    }
-
-    function listener(id, info, tab) {
-      if (id !== tabId) return;
-      // Only resolve when status is "complete" AND the URL is real (not chrome://newtab)
-      if (info.status === "complete" && isRealUrl(tab?.url || info.url)) {
-        chrome.tabs.onUpdated.removeListener(listener);
-        clearTimeout(timeout);
-        resolve();
-      }
-    }
-    chrome.tabs.onUpdated.addListener(listener);
-
-    // Also check if the tab is already loaded (race condition)
-    chrome.tabs.get(tabId).then((tab) => {
-      if (tab.status === "complete" && isRealUrl(tab.url)) {
-        chrome.tabs.onUpdated.removeListener(listener);
-        clearTimeout(timeout);
-        resolve();
-      }
-    }).catch(() => {});
-  });
 }
 
 // ─── Utility ─────────────────────────────────────────────────
