@@ -10,7 +10,6 @@ interface TrainingState {
   isTraining: boolean;
   lastProcessedIndex: number;
   trainingSuggestions: TrainingSuggestion[];
-  newlyAddedToDict: Array<{ chinese: string; vietnamese: string; category: string }>;
   batchProgress: { current: number; total: number } | null;
   isAutoNext: boolean;
   checklistCounts: Record<string, number>;
@@ -22,7 +21,6 @@ interface TrainingState {
   setIsTraining: (isTraining: boolean) => void;
   setLastProcessedIndex: (index: number) => void;
   setTrainingSuggestions: (suggestions: TrainingSuggestion[]) => void;
-  setNewlyAddedToDict: (dict: Array<{ chinese: string; vietnamese: string; category: string }>) => void;
   setBatchProgress: (progress: { current: number; total: number } | null) => void;
   setIsAutoNext: (isAutoNext: boolean) => void;
   incrementChecklistCount: (category: string) => void;
@@ -38,7 +36,6 @@ export const useTrainingStore = create<TrainingState>()(
       isTraining: false,
       lastProcessedIndex: 0,
       trainingSuggestions: [],
-      newlyAddedToDict: [],
       batchProgress: null,
       isAutoNext: false,
       checklistCounts: {},
@@ -49,7 +46,6 @@ export const useTrainingStore = create<TrainingState>()(
       setIsTraining: (isTraining) => set({ isTraining }),
       setLastProcessedIndex: (lastProcessedIndex) => set({ lastProcessedIndex }),
       setTrainingSuggestions: (trainingSuggestions) => set({ trainingSuggestions }),
-      setNewlyAddedToDict: (newlyAddedToDict) => set({ newlyAddedToDict }),
       setBatchProgress: (batchProgress) => set({ batchProgress }),
       setIsAutoNext: (isAutoNext) => set({ isAutoNext }),
       incrementChecklistCount: (category) => set((state) => ({
@@ -62,7 +58,6 @@ export const useTrainingStore = create<TrainingState>()(
         isTraining: false,
         lastProcessedIndex: 0,
         trainingSuggestions: [],
-        newlyAddedToDict: [],
         batchProgress: null,
         checklistCounts: {},
       }),
@@ -75,7 +70,6 @@ export const useTrainingStore = create<TrainingState>()(
         input: state.input,
         output: state.output,
         lastProcessedIndex: state.lastProcessedIndex,
-        newlyAddedToDict: state.newlyAddedToDict,
         isAutoNext: state.isAutoNext,
         checklistCounts: state.checklistCounts,
       }),

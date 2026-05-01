@@ -464,6 +464,26 @@ export function DictionaryManagement() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!globalEntries || globalEntries.length === 0) return;
+                  const text = globalEntries
+                    .map((e) => `${e.chinese}=${e.vietnamese}`)
+                    .join("\n");
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `tu-dien-chung-${new Date().toISOString().slice(0, 10)}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <DownloadIcon className="mr-2 size-3.5" />
+                Xuất file .txt
+              </Button>
               <Button variant="outline" size="sm" onClick={handleImportQTNames}>
                 <DownloadIcon className="mr-2 size-3.5" />
                 Nhập QT Names

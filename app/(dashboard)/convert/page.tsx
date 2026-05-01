@@ -72,7 +72,6 @@ export default function ConvertPage() {
     segments = [], setSegments,
     isTraining = false,
     trainingSuggestions = [], setTrainingSuggestions,
-    newlyAddedToDict = [], setNewlyAddedToDict,
     batchProgress = null,
     lastProcessedIndex = 0, setLastProcessedIndex,
     isAutoNext = false, setIsAutoNext
@@ -207,9 +206,8 @@ export default function ConvertPage() {
   const handleAddTrainingSuggestion = async (s: TrainingSuggestion) => {
     try {
       await bulkImportNameEntries("global", [{ chinese: s.chinese, vietnamese: s.vietnamese }], s.category, "replace");
-      setNewlyAddedToDict(prev => [...prev, { chinese: s.chinese, vietnamese: s.vietnamese, category: s.category }]);
-      setTrainingSuggestions(prev => prev.filter(item => item.chinese !== s.chinese));
-      toast.success(`Đã thêm "${s.chinese}" vào từ điển`);
+      setTrainingSuggestions(trainingSuggestions.filter(item => item.chinese !== s.chinese));
+      toast.success(`Đã thêm "${s.chinese}" vào Từ điển tên chung`);
       
       // Refresh engine dictionary and re-convert
       await refreshQTEngine();
@@ -217,18 +215,6 @@ export default function ConvertPage() {
     } catch {
       toast.error("Lưu thất bại");
     }
-  };
-
-  const handleExportNewDict = () => {
-    if (newlyAddedToDict.length === 0) return;
-    const text = newlyAddedToDict.map(e => `${e.chinese}=${e.vietnamese}`).join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `new-dict-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleImportSelected = async () => {
@@ -519,12 +505,6 @@ export default function ConvertPage() {
                   className="scale-75"
                 />
               </div>
-              {newlyAddedToDict.length > 0 && (
-                <Button size="xs" variant="outline" onClick={handleExportNewDict} className="text-[10px] h-7">
-                  <DownloadIcon className="mr-1.5 size-3" />
-                  Tải từ điển mới ({newlyAddedToDict.length})
-                </Button>
-              )}
               {isTraining && (
                 <Badge variant="secondary" className="animate-pulse">Đang quét...</Badge>
               )}
