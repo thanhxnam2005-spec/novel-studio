@@ -14,7 +14,7 @@ import { TextCompareEditor } from "@/components/ui/text-compare-editor";
 import { useConvertSettings } from "@/lib/hooks/use-convert-settings";
 import { useDebouncedValue } from "@/lib/hooks/use-debounce";
 import { useExcludedNamesList } from "@/lib/hooks/use-excluded-names";
-import { convertText, useQTEngineReady } from "@/lib/hooks/use-qt-engine";
+import { convertText, useQTEngineReady, refreshQTEngine } from "@/lib/hooks/use-qt-engine";
 import type {
   ConvertOptions,
   ConvertSegment,
@@ -233,10 +233,11 @@ Dịch chương truyện được cung cấp sang Tiếng Việt. Ưu tiên sự
 
 <translation_rules>
   <rule id="structure">Giữ nguyên cấu trúc đoạn văn, định dạng và dấu ngắt dòng của bản gốc.</rule>
-  <rule id="proper_names">Tên riêng (nhân vật, địa danh, môn phái, kỹ năng): giữ nguyên gốc hoặc phiên âm Hán-Việt tùy ngữ cảnh. Nhất quán cách dịch xuyên suốt chương.</rule>
-  <rule id="naturalness">Văn phong tự nhiên, mượt mà như tiểu thuyết tiếng Việt gốc — tránh dịch từng từ hoặc giữ nguyên cấu trúc câu Trung Quốc.</rule>
-  <rule id="dialogue_register">Giữ đúng ngữ điệu: lời thoại trang trọng giữ trang trọng, lời thoại thân mật giữ thân mật.</rule>
-  <rule id="terminology">Thuật ngữ chuyên ngành (tu tiên, võ thuật, phép thuật) dùng thuật ngữ Việt hóa phổ biến trong cộng đồng đọc truyện.</rule>
+  <rule id="proper_names">Tên riêng: sử dụng âm Hán-Việt (ví dụ: Vương Lâm, không phải Rừng Vương). Nhất quán cách dịch xuyên suốt chương.</rule>
+  <rule id="style">Sử dụng văn phong tiểu thuyết mạng Trung Quốc (Tiên Hiệp/Ngôn Tình), ưu tiên các từ Hán-Việt trang trọng cho bối cảnh tu tiên/cổ đại. Tránh dùng từ ngữ quá hiện đại hoặc bình dân thuần Việt.</rule>
+  <rule id="naturalness">Văn phong mượt mà nhưng vẫn giữ được "chất" truyện dịch, tránh dịch word-by-word.</rule>
+  <rule id="dialogue_register">Giữ đúng ngữ điệu: lời thoại trang trọng (ví dụ: "Tiền bối", "Vãn bối") giữ đúng sắc thái.</rule>
+  <rule id="terminology">Thuật ngữ tu tiên (Linh khí, Trúc Cơ, Đan dược) phải dùng đúng từ Hán-Việt tiêu chuẩn.</rule>
   <rule id="fidelity">Không thêm, bớt, giải thích, hoặc chú thích nội dung gốc.</rule>
   <rule id="special_chars">Giữ nguyên các ký hiệu đặc biệt (★, ※, ─, v.v.).</rule>
 </translation_rules>
@@ -306,7 +307,9 @@ Dịch chương truyện được cung cấp sang Tiếng Việt. Ưu tiên sự
       setNewlyAddedToDict(prev => [...prev, { chinese: s.chinese, vietnamese: s.vietnamese, category: s.category }]);
       setTrainingSuggestions(prev => prev.filter(item => item.chinese !== s.chinese));
       toast.success(`Đã thêm "${s.chinese}" vào từ điển`);
-      // Force immediate refresh of live translation
+      
+      // Refresh engine dictionary and re-convert
+      await refreshQTEngine();
       setTimeout(() => handleConvert(), 100);
     } catch {
       toast.error("Lưu thất bại");

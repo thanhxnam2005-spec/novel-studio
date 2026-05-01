@@ -201,6 +201,16 @@ export async function initQTEngineWithData(
   return initPromise;
 }
 
+/** Re-read dict from IDB and send to worker without killing it */
+export async function refreshQTEngine(): Promise<void> {
+  if (!worker) {
+    await initQTEngine();
+    return;
+  }
+  const dictData = await getDictEntriesForWorker();
+  send({ type: "init", dictData });
+}
+
 export function isQTEngineReady(): boolean {
   return isReady;
 }

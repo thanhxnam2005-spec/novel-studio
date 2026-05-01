@@ -60,8 +60,9 @@ ${opts.aiTranslated.slice(0, 3000)}
 <requirements>
 1. Chỉ đề xuất các mục thực sự cải thiện được bản dịch máy (biến nó giống với bản dịch chuyên nghiệp hơn).
 2. Phân loại theo các nhóm: nhân vật, thuật ngữ tu tiên, cụm hành động, cụm cảm xúc, từ nối, v.v.
-3. Chú trọng vào việc giữ đúng cấu trúc câu và sự tự nhiên của tiểu thuyết Việt.
-4. Mỗi đề xuất phải có { chinese, vietnamese, reason, category }.
+3. Chú trọng vào việc sử dụng từ Hán-Việt cho các thuật ngữ tu tiên, chiêu thức và tên riêng để giữ đúng phong cách tiên hiệp/huyền huyễn.
+4. Tránh dịch quá "thuần Việt" (quá hiện đại hoặc bình dân) cho các bối cảnh cổ đại/tu tiên.
+5. Mỗi đề xuất phải có { chinese, vietnamese, reason, category }.
 </requirements>
 
 <output_format>Trả về JSON chứa mảng "suggestions". Không giải thích gì thêm.</output_format>
