@@ -84,12 +84,10 @@ export default function DashboardLayout({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSearch]);
 
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    const isDark =
-      stored === "dark" ||
-      (!stored && matchMedia("(prefers-color-scheme:dark)").matches);
+    const isDark = stored !== "light";
     document.documentElement.classList.toggle("dark", isDark);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(isDark);

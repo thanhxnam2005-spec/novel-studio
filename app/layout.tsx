@@ -22,8 +22,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Novel Studio",
-  description: "Không gian sáng tác của bạn",
+  title: "Thuyết Thư Các",
+  description: "Kho tàng truyện chữ online",
 };
 
 export default function RootLayout({
@@ -34,16 +34,9 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${openSans.variable} ${playfair.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${openSans.variable} ${playfair.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.theme==="dark"||(!localStorage.theme&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="top-center" richColors />
