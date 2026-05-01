@@ -27,7 +27,7 @@ import {
   extractNamesAI, 
   extractNamesRuleBased 
 } from "@/lib/chapter-tools/name-extract";
-import { bulkImportNameEntries } from "@/lib/hooks/use-name-entries";
+import { bulkImportNameEntries, useGlobalNameEntries } from "@/lib/hooks/use-name-entries";
 import { useAIProviders, useAIModels } from "@/lib/hooks/use-ai-providers";
 import { getModel } from "@/lib/ai/provider";
 import { runTranslationTraining, type TrainingSuggestion } from "@/lib/ai/training-tools";
@@ -57,6 +57,7 @@ import {
   Volume2Icon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { sify } from "chinese-conv";
 import { useTrainingStore } from "@/lib/stores/training-store";
 import { useBackgroundTraining } from "@/lib/hooks/use-background-training";
 import { toast } from "sonner";
@@ -86,6 +87,7 @@ export default function ConvertPage() {
   const [extractedNames, setExtractedNames] = useState<any[]>([]);
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
+  const [showDetectedNames, setShowDetectedNames] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -106,12 +108,14 @@ export default function ConvertPage() {
     [convertOptions, rejectedAutoNames],
   );
 
+  const globalNames = useGlobalNameEntries();
+
   const handleConvert = useCallback(async () => {
     if (!input.trim()) return;
     const seq = ++seqRef.current;
     setIsConverting(true);
     try {
-      const result = await convertText(input, { options: mergedOptions });
+      const result = await convertText(input, { globalNames, options: mergedOptions });
       if (seqRef.current === seq) {
         setOutput(result.plainText);
         setSegments(result.segments);
@@ -124,7 +128,7 @@ export default function ConvertPage() {
     } finally {
       if (seqRef.current === seq) setIsConverting(false);
     }
-  }, [input, mergedOptions]);
+  }, [input, mergedOptions, globalNames]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -132,7 +136,7 @@ export default function ConvertPage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      setInput(text);
+      setInput(sify(text));
       setLastProcessedIndex(0);
       toast.success(`Đã nhập ${file.name}`);
     };
@@ -148,7 +152,7 @@ export default function ConvertPage() {
     }
     const seq = ++seqRef.current;
     setIsConverting(true);
-    convertText(debouncedInput, { options: mergedOptions })
+    convertText(debouncedInput, { globalNames, options: mergedOptions })
       .then((result) => {
         if (seqRef.current === seq) {
           setOutput(result.plainText);
@@ -166,7 +170,7 @@ export default function ConvertPage() {
       .finally(() => {
         if (seqRef.current === seq) setIsConverting(false);
       });
-  }, [liveMode, debouncedInput, mergedOptions, engineReady]);
+  }, [liveMode, debouncedInput, mergedOptions, engineReady, globalNames]);
 
   const handleRead = useCallback(() => {
     if (!output.trim()) return;
@@ -207,10 +211,7 @@ export default function ConvertPage() {
       await bulkImportNameEntries("global", [{ chinese: s.chinese, vietnamese: s.vietnamese }], s.category, "replace");
       setTrainingSuggestions(trainingSuggestions.filter(item => item.chinese !== s.chinese));
       toast.success(`Đã thêm "${s.chinese}" vào Từ điển tên chung`);
-      
-      // Refresh engine dictionary and re-convert
-      await refreshQTEngine();
-      await handleConvert();
+      // Note: Re-conversion happens automatically via the globalNames dependency in useEffect
     } catch {
       toast.error("Lưu thất bại");
     }
@@ -224,8 +225,7 @@ export default function ConvertPage() {
       await bulkImportNameEntries("global", toImport, "nhân vật", "replace");
       toast.success(`Đã thêm ${toImport.length} tên vào từ điển`);
       setExtractDialogOpen(false);
-      // Re-trigger conversion
-      handleConvert();
+      // Re-trigger conversion happens automatically via the globalNames dependency in useEffect
     } catch (err) {
       toast.error("Lưu từ điển thất bại");
     }
@@ -300,23 +300,6 @@ export default function ConvertPage() {
             </Label>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={() => handleTrain()}
-              disabled={isTraining || !input}
-              className="text-[10px] h-7 bg-primary/5 hover:bg-primary/10 border-primary/20"
-            >
-              {isTraining ? (
-                <LoaderIcon className="mr-1.5 size-3.5 animate-spin" />
-              ) : (
-                <RefreshCwIcon className="mr-1.5 size-3.5" />
-              )}
-              Huấn luyện dịch live
-            </Button>
-          </div>
-
           <div className="flex items-center gap-2 border-l pl-4 mr-2">
             <Switch
               id="edit-mode"
@@ -331,21 +314,6 @@ export default function ConvertPage() {
           {isConverting && (
             <LoaderIcon className="size-4 animate-spin text-muted-foreground" />
           )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExtractNames}
-            disabled={isExtracting || !input}
-            className="hidden sm:flex"
-          >
-            {isExtracting ? (
-              <LoaderIcon className="mr-1.5 size-3.5 animate-spin" />
-            ) : (
-              <SparklesIcon className="mr-1.5 size-3.5 text-primary" />
-            )}
-            Bổ sung từ điển
-          </Button>
 
           <div className="flex items-center gap-1">
             <Button
@@ -429,7 +397,7 @@ export default function ConvertPage() {
           panelWrapperClassName="h-[calc(100dvh-260px)]"
           leftValue={input}
           rightValue={output}
-          onChange={editMode ? setOutput : setInput}
+          onChange={editMode ? setOutput : (val) => setInput(sify(val))}
           editableSide={editMode ? "right" : "left"}
           storageKey="convert"
           leftLabel="Văn bản gốc (Trung)"
@@ -468,11 +436,29 @@ export default function ConvertPage() {
 
       {/* ── Detected names ── */}
       {detectedNames.length > 0 && (
-        <div className="mt-3 shrink-0">
-          <ConvertDetectedNames
-            detectedNames={detectedNames}
-            onDismiss={handleConvert}
-          />
+        <div className="mt-4 rounded-md border bg-muted/20 overflow-hidden shrink-0">
+          <button 
+            onClick={() => setShowDetectedNames(!showDetectedNames)}
+            className="flex w-full items-center justify-between p-3 hover:bg-muted/40 transition-colors"
+          >
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <SparklesIcon className="size-3.5 text-primary" />
+              Tên nhận diện tự động (Bấm để {showDetectedNames ? 'ẩn' : 'hiện'})
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground uppercase">{detectedNames.length} tên</span>
+              <ChevronDownIcon className={cn("size-4 transition-transform", showDetectedNames && "rotate-180")} />
+            </div>
+          </button>
+          
+          {showDetectedNames && (
+            <div className="p-4 border-t bg-background/50">
+              <ConvertDetectedNames
+                detectedNames={detectedNames}
+                onDismiss={handleConvert}
+              />
+            </div>
+          )}
         </div>
       )}
 

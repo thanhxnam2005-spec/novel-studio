@@ -8,6 +8,8 @@ import { useAIProviders } from "@/lib/hooks/use-ai-providers";
 import { useConvertSettings } from "@/lib/hooks/use-convert-settings";
 import { toast } from "sonner";
 import { useRef } from "react";
+import { sify } from "chinese-conv";
+import { db } from "@/lib/db";
 
 const BATCH_SIZE = 10000;
 
@@ -72,7 +74,8 @@ Dịch chương truyện được cung cấp sang Tiếng Việt. Ưu tiên sự
 
       while (currentStart < totalChars && trainingRef.current) {
         const currentEnd = Math.min(currentStart + BATCH_SIZE, totalChars);
-        const chunk = input.slice(currentStart, currentEnd);
+        const chunkRaw = input.slice(currentStart, currentEnd);
+        const chunk = sify(chunkRaw) || chunkRaw;
         
         // Use store to track current chunk for UI
         const numBatches = Math.ceil(totalChars / BATCH_SIZE);
@@ -80,8 +83,11 @@ Dịch chương truyện được cung cấp sang Tiếng Việt. Ưu tiên sự
         store.setBatchProgress({ current: currentBatch, total: numBatches });
         store.setLastProcessedIndex(currentStart);
 
-        // 1. Get QT result
-        const qtResult = await convertText(chunk, { options: settings });
+        // Fetch latest global names
+        const globalNames = await db.nameEntries.where("scope").equals("global").toArray();
+
+        // 1. Get QT result (with global names)
+        const qtResult = await convertText(chunk, { globalNames, options: settings });
         
         // 2. Get AI Professional result
         const { text: aiTranslated } = await generateText({

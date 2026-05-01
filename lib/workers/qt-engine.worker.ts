@@ -528,7 +528,7 @@ function convert(
   const novelNamesMap = novelNames?.length
     ? new Map(
         novelNames.map((e) => [
-          e.chinese,
+          sify(e.chinese) || e.chinese,
           capitalizeWords(pickPrimary(e.vietnamese)),
         ]),
       )
@@ -536,7 +536,7 @@ function convert(
   const globalNamesMap = globalNames?.length
     ? new Map(
         globalNames.map((e) => [
-          e.chinese,
+          sify(e.chinese) || e.chinese,
           capitalizeWords(pickPrimary(e.vietnamese)),
         ]),
       )
