@@ -581,17 +581,30 @@ function UrlStep() {
                   </li>
                   <li>Copy ID và dán vào ô trên</li>
                 </ol>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  asChild
-                >
-                  <a href="/novel-studio-connector.zip" download>
-                    <DownloadIcon className="mr-1.5 size-3" />
-                    Tải Novel Studio Connector
-                  </a>
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    asChild
+                  >
+                    <a href="/novel-studio-connector-pc.zip" download>
+                      <DownloadIcon className="mr-1.5 size-3" />
+                      Tải bản PC
+                    </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    asChild
+                  >
+                    <a href="/novel-studio-connector-android.zip" download>
+                      <DownloadIcon className="mr-1.5 size-3" />
+                      Tải bản Android
+                    </a>
+                  </Button>
+                </div>
               </div>
             )}
           </div>
