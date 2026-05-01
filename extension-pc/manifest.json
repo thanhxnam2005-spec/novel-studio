@@ -9,8 +9,6 @@
     "matches": [
       "http://localhost:*/*",
       "https://localhost:*/*",
-      "https://novel-studio-six.vercel.app/*",
-      "https://novel-studio-kappa.vercel.app/*",
       "https://thuyetthucac.vercel.app/*"
     ]
   },

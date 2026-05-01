@@ -9,7 +9,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "zip:ext": "zip -j public/novel-studio-connector.zip extension/manifest.json extension/background.js",
+    "zip:android": "powershell -Command \"Compress-Archive -Path extension\\manifest.json, extension\\background.js -DestinationPath public\\novel-studio-connector-android.zip -Force\"",
+    "zip:pc": "powershell -Command \"Compress-Archive -Path extension-pc\\manifest.json, extension-pc\\background.js -DestinationPath public\\novel-studio-connector-pc.zip -Force\"",
+    "zip:all": "npm run zip:android && npm run zip:pc",
     "postinstall": "mkdir -p public/wasm && cp node_modules/jieba-wasm/pkg/web/jieba_rs_wasm_bg.wasm public/wasm/ 2>/dev/null || true",
     "prepare": "husky"
   },
