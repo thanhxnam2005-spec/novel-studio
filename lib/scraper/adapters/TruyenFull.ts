@@ -17,7 +17,8 @@ import type { SiteAdapter } from "../types";
 export const TruyenFullAdapter: SiteAdapter = {
   name: "TruyenFull",
   urlPattern: /truyenfull\.\w+/,
-  chapterWaitSelector: "#chapter-c",
+  // NOTE: #chapter-c exists but content is loaded via JS/AJAX.
+  // Do NOT use chapterWaitSelector — let extension use waitForStableContent instead.
 
   getNovelInfo(html, url) {
     const doc = new DOMParser().parseFromString(html, "text/html");

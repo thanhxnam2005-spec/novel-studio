@@ -19,7 +19,6 @@ import type { SiteAdapter } from "../types";
 export const SSTruyenAdapter: SiteAdapter = {
   name: "SSTruyen",
   urlPattern: /sstruyen\.com\.vn/,
-  chapterWaitSelector: "#chapter-c",
 
   getNovelInfo(html, url) {
     const doc = new DOMParser().parseFromString(html, "text/html");

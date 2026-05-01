@@ -17,7 +17,6 @@ import type { SiteAdapter } from "../types";
 export const MeTruyenChuAdapter: SiteAdapter = {
   name: "MeTruyenChu",
   urlPattern: /metruyenchu\.com\.vn/,
-  chapterWaitSelector: "#chapter-c",
 
   getNovelInfo(html, url) {
     const doc = new DOMParser().parseFromString(html, "text/html");
