@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${openSans.variable} ${playfair.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
+      className={`${openSans.variable} ${playfair.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>

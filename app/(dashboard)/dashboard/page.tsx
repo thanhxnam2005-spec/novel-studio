@@ -75,7 +75,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-5xl overflow-hidden px-4 py-6 md:px-6 md:py-8 space-y-8">
+    <main className="mx-auto w-full min-w-0 max-w-5xl overflow-hidden px-4 py-6 md:px-6 md:py-8 space-y-10">
       {/* Danh Sách Truyện Section */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -174,3 +174,5 @@ function StatCard({
     </Card>
   );
 }
+
+

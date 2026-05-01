@@ -16,7 +16,7 @@ type DataSettingsTabsProps = {
 
 export function DataSettingsTabs({ activeTab }: DataSettingsTabsProps) {
   return (
-    <TabsList className="grid h-auto w-full grid-cols-3 gap-2 rounded-xl bg-muted/50 p-1.5 sm:grid-cols-5 group-data-horizontal/tabs:h-auto">
+    <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1.5 sm:grid-cols-4 group-data-horizontal/tabs:h-auto">
       <TabsTrigger value="stats" className="gap-1.5 rounded-lg py-1">
         <DatabaseIcon className="size-3" />
         <span
@@ -50,20 +50,9 @@ export function DataSettingsTabs({ activeTab }: DataSettingsTabsProps) {
           Nhập
         </span>
       </TabsTrigger>
-      <TabsTrigger value="sync" className="gap-1.5 rounded-lg py-1">
-        <CloudIcon className="size-3" />
-        <span
-          className={cn(
-            activeTab === "sync" ? "inline" : "hidden",
-            "sm:inline",
-          )}
-        >
-          Đồng bộ
-        </span>
-      </TabsTrigger>
       <TabsTrigger
         value="dictionary"
-        className="col-span-3 gap-1.5 rounded-lg py-1 sm:col-span-1"
+        className="col-span-2 gap-1.5 rounded-lg py-1 sm:col-span-1"
       >
         <BookTextIcon className="size-3" />
         <span

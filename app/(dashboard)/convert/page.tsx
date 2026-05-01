@@ -17,6 +17,7 @@ import { useExcludedNamesList } from "@/lib/hooks/use-excluded-names";
 import { convertText, useQTEngineReady } from "@/lib/hooks/use-qt-engine";
 import type { ConvertOptions, DictPair } from "@/lib/workers/qt-engine.types";
 import { useReaderPanel } from "@/lib/stores/reader-panel";
+import { PasswordGate } from "@/components/password-gate";
 import {
   ArrowRightLeftIcon,
   CheckIcon,
@@ -114,113 +115,115 @@ export default function ConvertPage() {
   }, []);
 
   return (
-    <main className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden px-6 py-4">
-      {/* ── Header ── */}
-      <div className="mb-4 flex shrink-0 items-start justify-between flex-col sm:flex-row gap-2">
-        <div>
-          <h1 className="font-serif text-2xl font-bold">Convert nhanh</h1>
-          <p className="text-sm text-muted-foreground">
-            Dán văn bản tiếng Trung và convert sang tiếng Việt bằng từ điển QT.
-            Không cần API key.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {input && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleClear}
-              title="Xóa"
-            >
-              <Trash2Icon className="size-3.5" />
-            </Button>
-          )}
-          {output && (
-            <>
-              <Button variant="ghost" size="sm" onClick={handleRead}>
-                <Volume2Icon className="mr-1.5 size-3.5" />
-                Đọc
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleCopy}>
-                {copied ? (
-                  <CheckIcon className="mr-1.5 size-3.5" />
-                ) : (
-                  <ClipboardCopyIcon className="mr-1.5 size-3.5" />
-                )}
-                {copied ? "Đã chép" : "Sao chép"}
-              </Button>
-            </>
-          )}
-
-          {(input || output) && <div className="h-5 w-px bg-border" />}
-
-          <div className="flex items-center gap-2">
-            <Switch
-              id="live-mode"
-              checked={liveMode}
-              onCheckedChange={setLiveMode}
-              disabled={!engineReady}
-            />
-            <Label htmlFor="live-mode" className="text-sm">
-              Live
-            </Label>
+    <PasswordGate>
+      <main className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden px-6 py-4">
+        {/* ── Header ── */}
+        <div className="mb-4 flex shrink-0 items-start justify-between flex-col sm:flex-row gap-2">
+          <div>
+            <h1 className="font-serif text-2xl font-bold">Convert nhanh</h1>
+            <p className="text-sm text-muted-foreground">
+              Dán văn bản tiếng Trung và convert sang tiếng Việt bằng từ điển QT.
+              Không cần API key.
+            </p>
           </div>
 
-          {isConverting && (
-            <LoaderIcon className="size-4 animate-spin text-muted-foreground" />
-          )}
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <SettingsIcon className="mr-1.5 size-3.5" />
-                Cài đặt
+          <div className="flex items-center gap-3">
+            {input && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleClear}
+                title="Xóa"
+              >
+                <Trash2Icon className="size-3.5" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-72">
-              <ConvertConfig />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
+            )}
+            {output && (
+              <>
+                <Button variant="ghost" size="sm" onClick={handleRead}>
+                  <Volume2Icon className="mr-1.5 size-3.5" />
+                  Đọc
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCopy}>
+                  {copied ? (
+                    <CheckIcon className="mr-1.5 size-3.5" />
+                  ) : (
+                    <ClipboardCopyIcon className="mr-1.5 size-3.5" />
+                  )}
+                  {copied ? "Đã chép" : "Sao chép"}
+                </Button>
+              </>
+            )}
 
-      {/* ── Side-by-side editor ── */}
-      <TextCompareEditor
-        panelWrapperClassName="h-[calc(100dvh-260px)]"
-        leftValue={input}
-        rightValue={output}
-        onChange={setInput}
-        editableSide="left"
-        storageKey="convert"
-        leftLabel="Văn bản gốc (Trung)"
-        rightLabel="Kết quả (Việt)"
-      />
+            {(input || output) && <div className="h-5 w-px bg-border" />}
 
-      {/* ── Detected names ── */}
-      {detectedNames.length > 0 && (
-        <div className="mt-3 shrink-0">
-          <ConvertDetectedNames detectedNames={detectedNames} />
-        </div>
-      )}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="live-mode"
+                checked={liveMode}
+                onCheckedChange={setLiveMode}
+                disabled={!engineReady}
+              />
+              <Label htmlFor="live-mode" className="text-sm">
+                Live
+              </Label>
+            </div>
 
-      {/* ── Manual convert button ── */}
-      {!liveMode && (
-        <div className="mt-4 flex shrink-0 justify-center">
-          <Button
-            size="lg"
-            onClick={handleConvert}
-            disabled={isConverting || !input.trim() || !engineReady}
-          >
-            <ArrowRightLeftIcon className="mr-2 size-4" />
-            {isConverting
-              ? "Đang convert..."
-              : !engineReady
-                ? "Đang tải từ điển..."
-                : "Convert"}
-          </Button>
+            {isConverting && (
+              <LoaderIcon className="size-4 animate-spin text-muted-foreground" />
+            )}
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <SettingsIcon className="mr-1.5 size-3.5" />
+                  Cài đặt
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72">
+                <ConvertConfig />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-      )}
-    </main>
+
+        {/* ── Side-by-side editor ── */}
+        <TextCompareEditor
+          panelWrapperClassName="h-[calc(100dvh-260px)]"
+          leftValue={input}
+          rightValue={output}
+          onChange={setInput}
+          editableSide="left"
+          storageKey="convert"
+          leftLabel="Văn bản gốc (Trung)"
+          rightLabel="Kết quả (Việt)"
+        />
+
+        {/* ── Detected names ── */}
+        {detectedNames.length > 0 && (
+          <div className="mt-3 shrink-0">
+            <ConvertDetectedNames detectedNames={detectedNames} />
+          </div>
+        )}
+
+        {/* ── Manual convert button ── */}
+        {!liveMode && (
+          <div className="mt-4 flex shrink-0 justify-center">
+            <Button
+              size="lg"
+              onClick={handleConvert}
+              disabled={isConverting || !input.trim() || !engineReady}
+            >
+              <ArrowRightLeftIcon className="mr-2 size-4" />
+              {isConverting
+                ? "Đang convert..."
+                : !engineReady
+                  ? "Đang tải từ điển..."
+                  : "Convert"}
+            </Button>
+          </div>
+        )}
+      </main>
+    </PasswordGate>
   );
 }

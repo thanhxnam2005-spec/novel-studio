@@ -50,7 +50,7 @@ export const MeTruyenChuAdapter: SiteAdapter = {
       undefined;
 
     // Chapter list
-    const chapterLinks = doc.querySelectorAll("#list-chapter a, ul.list-chapter a, .list-chapter a");
+    const chapterLinks = doc.querySelectorAll("#list-chapter a, ul.list-chapter a, .list-chapter a, .list-chap a, a[href*='chuong-'], a[href*='/chuong']");
     const baseUrl = new URL(url).origin;
     const chapters = [...chapterLinks]
       .filter((el) => {

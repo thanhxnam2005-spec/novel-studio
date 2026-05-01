@@ -12,6 +12,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
+import { WelcomeModal } from "@/components/welcome-modal";
 import { Button } from "@/components/ui/button";
 import {
   SidebarInset,
@@ -84,10 +85,10 @@ export default function DashboardLayout({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSearch]);
 
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    const isDark = stored !== "light";
+    const isDark = stored === "dark";
     document.documentElement.classList.toggle("dark", isDark);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(isDark);
@@ -175,6 +176,7 @@ export default function DashboardLayout({
       <NameDictPanel />
       <DictInitializer />
       <GlobalSearchDialog />
+      <WelcomeModal />
     </SidebarProvider>
   );
 }

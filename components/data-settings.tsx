@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 import { DatabaseIcon } from "lucide-react";
 import { useNovels } from "@/lib/hooks";
@@ -23,7 +22,7 @@ import { DataSettingsTabs } from "@/components/data-settings/data-settings-tabs"
 import { StorageStatsCard } from "@/components/data-settings/storage-stats-card";
 import { ExportSettingsCard } from "@/components/data-settings/export-settings-card";
 import { ImportSettingsCard } from "@/components/data-settings/import-settings-card";
-import { SyncSettingsCard } from "@/components/data-settings/sync-settings-card";
+import { PasswordGate } from "@/components/password-gate";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -31,13 +30,6 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function generateSyncCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(4));
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
 }
 
 export function DataSettings() {
@@ -68,25 +60,6 @@ export function DataSettings() {
   const [includeAI, setIncludeAI] = useState(true);
   const [includeConversations, setIncludeConversations] = useState(true);
   const [exportPassword, setExportPassword] = useState("");
-
-  // Cloud sync state
-  const [syncPassword, setSyncPassword] = useState("");
-  const [syncUploading, setSyncUploading] = useState(false);
-  const [syncCode, setSyncCode] = useState("");
-  const [syncExpiresAt, setSyncExpiresAt] = useState<string | null>(null);
-  const [syncDownloadCode, setSyncDownloadCode] = useState("");
-  const [syncDownloading, setSyncDownloading] = useState(false);
-  const [syncFile, setSyncFile] = useState<File | null>(null);
-  const [syncPreview, setSyncPreview] = useState<ImportPreview | null>(null);
-  const [syncNeedsPassword, setSyncNeedsPassword] = useState(false);
-  const [syncImportPassword, setSyncImportPassword] = useState("");
-  const [syncConflictMode, setSyncConflictMode] =
-    useState<ConflictMode>("overwrite");
-  const [syncProgressBar, setSyncProgressBar] = useState<{
-    label: string;
-    percentage: number;
-    detail?: string;
-  } | null>(null);
 
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -255,310 +228,6 @@ export function DataSettings() {
     );
   }, []);
 
-  // ─── Cloud sync ───────────────────────────────────────────
-
-  const handleSyncUpload = useCallback(async () => {
-    setSyncUploading(true);
-    setSyncCode("");
-    setSyncExpiresAt(null);
-    setSyncProgressBar({
-      label: "Đang thu thập dữ liệu",
-      percentage: 0,
-    });
-
-    try {
-      const code = generateSyncCode();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      const payload = await buildExportPayload({
-        novelIds: selectedNovelIds.length > 0 ? selectedNovelIds : undefined,
-        includeAISettings: includeAI,
-        includeConversations,
-        includeLargeDictionaryData: false,
-        password: syncPassword || undefined,
-        onProgress: (info) => {
-          setSyncProgressBar({
-            label: "Đang thu thập dữ liệu",
-            percentage: Math.round(info.percentage * 0.3),
-            detail: info.tableName,
-          });
-        },
-        onStageProgress: (info) => {
-          if (info.stage === "combine") {
-            setSyncProgressBar({
-              label: "Đang hợp nhất dữ liệu",
-              percentage: 38,
-              detail: info.message,
-            });
-          } else if (info.stage === "encrypt") {
-            setSyncProgressBar({
-              label: "Đang mã hoá bản sao lưu",
-              percentage: 46,
-              detail: info.message,
-            });
-          } else if (info.stage === "finalize") {
-            setSyncProgressBar({
-              label: "Đang chuẩn bị tải lên",
-              percentage: 50,
-              detail: info.message,
-            });
-          }
-        },
-      });
-
-      const parsedPayload = JSON.parse(payload.json) as unknown;
-      const envelope = JSON.stringify({
-        version: 1,
-        code,
-        expiresAt,
-        payload: parsedPayload,
-      });
-
-      await upload(
-        `sync/${code}.json`,
-        new Blob([envelope], { type: "application/json" }),
-        {
-          access: "public",
-          handleUploadUrl: "/api/sync/upload",
-          contentType: "application/json",
-          multipart: true,
-          clientPayload: JSON.stringify({ code, expiresAt }),
-          onUploadProgress: ({ percentage }) => {
-            setSyncProgressBar({
-              label: "Tải lên Cloud",
-              percentage: 50 + Math.round(percentage * 0.5),
-            });
-          },
-        },
-      );
-
-      setSyncCode(code);
-      setSyncExpiresAt(expiresAt);
-      setSyncProgressBar({
-        label: "Đã tải lên hoàn tất",
-        percentage: 100,
-      });
-      toast.success("Đã tải dữ liệu lên cloud.");
-      setTimeout(() => {
-        setSyncProgressBar(null);
-      }, 1200);
-    } catch (err) {
-      setSyncProgressBar(null);
-      toast.error(
-        err instanceof Error ? err.message : "Không thể tải dữ liệu lên cloud.",
-      );
-    } finally {
-      setSyncUploading(false);
-    }
-  }, [selectedNovelIds, includeAI, includeConversations, syncPassword]);
-
-  const handleCopySyncCode = useCallback(async () => {
-    if (!syncCode) return;
-    try {
-      await navigator.clipboard.writeText(syncCode);
-      toast.success("Đã sao chép mã đồng bộ.");
-    } catch {
-      toast.error("Không thể sao chép mã.");
-    }
-  }, [syncCode]);
-
-  const handleSyncDownload = useCallback(async () => {
-    const code = syncDownloadCode.trim().toUpperCase();
-    if (!/^[0-9A-F]{8}$/.test(code)) {
-      toast.error("Mã đồng bộ phải gồm 8 ký tự hex.");
-      return;
-    }
-
-    setSyncDownloading(true);
-    setSyncPreview(null);
-    setSyncNeedsPassword(false);
-    setSyncImportPassword("");
-    setSyncFile(null);
-    setSyncProgressBar({
-      label: "Xử lý mã đồng bộ",
-      percentage: 5,
-    });
-
-    try {
-      const res = await fetch(`/api/sync/download/${code}`, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        let message = "Không thể tải dữ liệu đồng bộ.";
-        try {
-          const parsed = JSON.parse(text) as { error?: string };
-          if (parsed.error) message = parsed.error;
-        } catch {
-          // ignore parse error and keep generic message
-        }
-        throw new Error(message);
-      }
-
-      const resolved = (await res.json()) as { url?: string; error?: string };
-      if (!resolved.url) {
-        throw new Error(resolved.error || "Không thể resolve link đồng bộ.");
-      }
-
-      const blobRes = await fetch(resolved.url, {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      if (!blobRes.ok) {
-        throw new Error("Không thể tải dữ liệu từ Blob.");
-      }
-      const totalBytes = Number(blobRes.headers.get("content-length") || 0);
-      let raw: string;
-      if (blobRes.body) {
-        const reader = blobRes.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let received = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            received += value.byteLength;
-            if (totalBytes > 0) {
-              const pct = Math.min(
-                85,
-                12 + Math.round((received / totalBytes) * 73),
-              );
-              setSyncProgressBar({
-                label: "Tải về bản sao lưu",
-                percentage: pct,
-                detail: `${formatFileSize(received)} / ${formatFileSize(totalBytes)}`,
-              });
-            } else {
-              setSyncProgressBar({
-                label: "Tải về bản sao lưu",
-                percentage: 70,
-                detail: `${formatFileSize(received)}`,
-              });
-            }
-          }
-        }
-        raw = new TextDecoder().decode(
-          chunks.length === 1
-            ? chunks[0]
-            : (() => {
-                const merged = new Uint8Array(received);
-                let offset = 0;
-                for (const chunk of chunks) {
-                  merged.set(chunk, offset);
-                  offset += chunk.byteLength;
-                }
-                return merged;
-              })(),
-        );
-      } else {
-        raw = await blobRes.text();
-      }
-      setSyncProgressBar({
-        label: "Đang phân tích bản sao lưu",
-        percentage: 90,
-      });
-      let text = raw;
-
-      try {
-        const parsed = JSON.parse(raw) as {
-          version?: number;
-          expiresAt?: string;
-          payload?: unknown;
-        };
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          parsed.version === 1 &&
-          typeof parsed.expiresAt === "string" &&
-          "payload" in parsed
-        ) {
-          if (Date.parse(parsed.expiresAt) < Date.now()) {
-            throw new Error("Mã đồng bộ đã hết hạn.");
-          }
-          text = JSON.stringify(parsed.payload);
-        }
-      } catch (err) {
-        if (err instanceof Error && err.message === "Mã đồng bộ đã hết hạn.") {
-          throw err;
-        }
-      }
-      setSyncProgressBar({
-        label: "Đang chuẩn bị xem trước dữ liệu nhập",
-        percentage: 96,
-      });
-
-      const file = new File([text], `novel-studio-sync-${code}.json`, {
-        type: "application/json",
-      });
-      setSyncFile(file);
-
-      try {
-        const preview = await previewImportFile(file);
-        setSyncPreview(preview);
-        setSyncProgressBar({
-          label: "Đã tải về hoàn tất",
-          percentage: 100,
-        });
-      } catch (err) {
-        if (err instanceof Error && err.message === "ENCRYPTED") {
-          setSyncNeedsPassword(true);
-          setSyncProgressBar({
-            label: "Bản sao lưu đã được mã hóa",
-            percentage: 100,
-            detail: "Nhập mật khẩu để xem trước và import.",
-          });
-        } else {
-          throw err;
-        }
-      }
-      setTimeout(() => {
-        setSyncProgressBar(null);
-      }, 1200);
-    } catch (err) {
-      setSyncProgressBar(null);
-      toast.error(
-        err instanceof Error ? err.message : "Không thể tải dữ liệu đồng bộ.",
-      );
-    } finally {
-      setSyncDownloading(false);
-    }
-  }, [syncDownloadCode]);
-
-  const handleSyncDecryptAndPreview = useCallback(async () => {
-    if (!syncFile || !syncImportPassword) return;
-
-    try {
-      const preview = await previewImportFile(syncFile, syncImportPassword);
-      setSyncPreview(preview);
-      setSyncNeedsPassword(false);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Không thể giải mã tệp đồng bộ.",
-      );
-    }
-  }, [syncFile, syncImportPassword]);
-
-  const handleSyncImport = useCallback(async () => {
-    if (!syncFile) return;
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setProgress(null);
-    setResult(null);
-    setProgressOpen(true);
-
-    try {
-      await importDatabase(
-        syncFile,
-        {
-          conflictMode: syncConflictMode,
-          signal: ac.signal,
-          onProgress: setProgress,
-        },
-        syncImportPassword || undefined,
-      );
-      setResult({ success: true, message: "Nhập dữ liệu đồng bộ thành công!" });
-      loadStats();
       setSyncFile(null);
       setSyncPreview(null);
       setSyncNeedsPassword(false);
@@ -641,36 +310,10 @@ export function DataSettings() {
           />
         </TabsContent>
 
-        <TabsContent value="sync">
-          <SyncSettingsCard
-            syncProgressBar={syncProgressBar}
-            syncPassword={syncPassword}
-            syncUploading={syncUploading}
-            syncCode={syncCode}
-            syncExpiresAt={syncExpiresAt}
-            syncDownloadCode={syncDownloadCode}
-            syncDownloading={syncDownloading}
-            syncNeedsPassword={syncNeedsPassword}
-            syncImportPassword={syncImportPassword}
-            syncPreview={syncPreview}
-            syncConflictMode={syncConflictMode}
-            onSyncPasswordChange={setSyncPassword}
-            onSyncUpload={handleSyncUpload}
-            onCopySyncCode={handleCopySyncCode}
-            onSyncDownloadCodeChange={(value) =>
-              setSyncDownloadCode(value.toUpperCase().replace(/[^0-9A-F]/g, ""))
-            }
-            onSyncDownload={handleSyncDownload}
-            onSyncImportPasswordChange={setSyncImportPassword}
-            onSyncDecryptAndPreview={handleSyncDecryptAndPreview}
-            onSyncConflictModeChange={setSyncConflictMode}
-            onSyncImport={handleSyncImport}
-          />
-        </TabsContent>
-
-        {/* ─── Dictionary Tab ──────────────────────────────────── */}
         <TabsContent value="dictionary">
-          <DictionaryManagement />
+          <PasswordGate>
+            <DictionaryManagement />
+          </PasswordGate>
         </TabsContent>
       </Tabs>
       {/* ─── Progress Dialog ──────────────────────────────── */}

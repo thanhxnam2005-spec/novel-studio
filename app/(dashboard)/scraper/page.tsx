@@ -66,6 +66,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PasswordGate } from "@/components/password-gate";
 import { toast } from "sonner";
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -369,61 +370,63 @@ export default function ScraperPage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-8">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">
-            Scraper
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Nhập truyện từ website bên ngoài vào hệ thống.
-          </p>
+    <PasswordGate>
+      <main className="mx-auto w-full max-w-4xl px-6 py-8">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h1 className="font-heading text-3xl font-bold tracking-tight">
+              Scraper
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Nhập truyện từ website bên ngoài vào hệ thống.
+            </p>
+          </div>
+          <DebugToolbar />
         </div>
-        <DebugToolbar />
-      </div>
 
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        {/* Step indicator */}
-        <nav className="flex items-center justify-center gap-1">
-          {STEPS.map((s, i) => (
-            <div key={s.key} className="flex items-center gap-1">
-              {i > 0 && (
-                <ArrowRightIcon
-                  className={`size-3 shrink-0 ${i <= stepIndex ? "text-primary" : "text-border"}`}
-                />
-              )}
-              <button
-                onClick={() => {
-                  if (i < stepIndex) store.setStep(s.key);
-                }}
-                disabled={i > stepIndex}
-                className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-all sm:px-3 ${
-                  i === stepIndex
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : i < stepIndex
-                      ? "bg-primary/10 text-primary hover:bg-primary/20"
-                      : "text-muted-foreground/50"
-                }`}
-              >
-                <s.icon
-                  className={`size-3.5 shrink-0 sm:size-3 ${i === stepIndex && s.key === "scraping" ? "animate-spin" : ""}`}
-                />
-                <span
-                  className={i === stepIndex ? "sm:inline" : "hidden sm:inline"}
+        <div className="mx-auto w-full max-w-3xl space-y-6">
+          {/* Step indicator */}
+          <nav className="flex items-center justify-center gap-1">
+            {STEPS.map((s, i) => (
+              <div key={s.key} className="flex items-center gap-1">
+                {i > 0 && (
+                  <ArrowRightIcon
+                    className={`size-3 shrink-0 ${i <= stepIndex ? "text-primary" : "text-border"}`}
+                  />
+                )}
+                <button
+                  onClick={() => {
+                    if (i < stepIndex) store.setStep(s.key);
+                  }}
+                  disabled={i > stepIndex}
+                  className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-all sm:px-3 ${
+                    i === stepIndex
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : i < stepIndex
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "text-muted-foreground/50"
+                  }`}
                 >
-                  {s.label}
-                </span>
-              </button>
-            </div>
-          ))}
-        </nav>
+                  <s.icon
+                    className={`size-3.5 shrink-0 sm:size-3 ${i === stepIndex && s.key === "scraping" ? "animate-spin" : ""}`}
+                  />
+                  <span
+                    className={i === stepIndex ? "sm:inline" : "hidden sm:inline"}
+                  >
+                    {s.label}
+                  </span>
+                </button>
+              </div>
+            ))}
+          </nav>
 
-        {store.step === "url" && <UrlStep />}
-        {store.step === "select" && <SelectStep />}
-        {store.step === "scraping" && <ScrapingStep />}
-        {store.step === "preview" && <PreviewStep router={router} />}
-      </div>
-    </main>
+          {store.step === "url" && <UrlStep />}
+          {store.step === "select" && <SelectStep />}
+          {store.step === "scraping" && <ScrapingStep />}
+          {store.step === "preview" && <PreviewStep router={router} />}
+        </div>
+      </main>
+    </PasswordGate>
   );
 }
 

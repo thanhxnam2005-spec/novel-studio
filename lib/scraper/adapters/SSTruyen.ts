@@ -43,17 +43,25 @@ export const SSTruyenAdapter: SiteAdapter = {
       doc.querySelector('img[itemprop="image"]')?.getAttribute("src") ??
       undefined;
 
-    const chapterLinks = doc.querySelectorAll("#list-chapter .row a, #list-chapter a, .list-chapter a");
+    const chapterLinks = doc.querySelectorAll("#list-chapter .row a, #list-chapter a, .list-chapter a, .list-chap a, a[href*='chuong-'], a[href*='/chuong']");
     const baseUrl = new URL(url).origin;
-    const chapters = [...chapterLinks].map((el, i) => {
+    // Remove duplicates based on URL
+    const uniqueLinks = new Map();
+    [...chapterLinks].forEach(el => {
       const href = el.getAttribute("href") ?? "";
-      const fullUrl = href.startsWith("http") ? href : `${baseUrl}${href}`;
-      return {
-        title: el.textContent?.trim() ?? `Chương ${i + 1}`,
-        url: fullUrl,
-        order: i,
-      };
+      if (href.includes("chuong")) {
+        const fullUrl = href.startsWith("http") ? href : `${baseUrl}${href}`;
+        if (!uniqueLinks.has(fullUrl)) {
+          uniqueLinks.set(fullUrl, { title: el.textContent?.trim() || "Chương", url: fullUrl });
+        }
+      }
     });
+
+    const chapters = Array.from(uniqueLinks.values()).map((ch, i) => ({
+      title: ch.title.length > 2 ? ch.title : `Chương ${i + 1}`,
+      url: ch.url,
+      order: i,
+    }));
 
     return { title, author, description, coverImage, chapters };
   },
