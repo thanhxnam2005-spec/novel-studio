@@ -208,15 +208,16 @@ export async function refreshQTEngine(): Promise<void> {
     return;
   }
   const dictData = await getDictEntriesForWorker();
-  
+  const w = worker; // capture non-null reference
+
   return new Promise<void>((resolve) => {
-    const origHandler = worker!.onmessage;
-    worker!.onmessage = (event: MessageEvent<QTWorkerResponse>) => {
+    const origHandler = w.onmessage;
+    w.onmessage = (event: MessageEvent<QTWorkerResponse>) => {
       if (event.data.type === "ready") {
-        worker!.onmessage = origHandler;
+        w.onmessage = origHandler;
         resolve();
       } else {
-        origHandler?.call(worker, event);
+        origHandler?.call(w, event);
       }
     };
     send({ type: "init", dictData });

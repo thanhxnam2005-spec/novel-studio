@@ -47,6 +47,6 @@ export async function updateConvertSettings(
       id: SINGLETON_ID,
       ...DEFAULT_CONVERT_OPTIONS,
       ...patch,
-    });
+    } as any);
   }
 }

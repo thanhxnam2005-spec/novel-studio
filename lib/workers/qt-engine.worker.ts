@@ -523,7 +523,7 @@ function convert(
   globalNames?: DictPair[],
   opts?: ConvertOptions,
 ): ConvertResult {
-  const o = { ...DEFAULT_CONVERT_OPTIONS, ...opts };
+  const o = { ...DEFAULT_CONVERT_OPTIONS, ...opts } as Required<ConvertOptions>;
 
   const novelNamesMap = novelNames?.length
     ? new Map(

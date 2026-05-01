@@ -304,7 +304,7 @@ export default function ConvertPage() {
             <Button
               size="xs"
               variant="outline"
-              onClick={handleTrain}
+              onClick={() => handleTrain()}
               disabled={isTraining || !input}
               className="text-[10px] h-7 bg-primary/5 hover:bg-primary/10 border-primary/20"
             >

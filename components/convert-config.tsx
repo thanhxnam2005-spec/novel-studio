@@ -9,8 +9,12 @@ import {
   updateConvertSettings,
 } from "@/lib/hooks/use-convert-settings";
 import type {
+  ConvertOptions,
   LuatNhanMode,
+  NameVsPriority,
+  ScopePriority,
   SplitMode,
+  VpLengthPriority,
 } from "@/lib/workers/qt-engine.types";
 import { useAIProviders, useAIModels } from "@/lib/hooks/use-ai-providers";
 import { 
