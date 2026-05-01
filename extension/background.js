@@ -93,7 +93,8 @@ async function handleFetch(url, waitSelector, clickSelector, timeout) {
   }
 
   try {
-    await waitForTabLoad(tabId, 45000); // Increased timeout for mobile
+    // Wait for the REAL page to load (not chrome://newtab)
+    await waitForTabLoad(tabId, url, 60000);
     log(`page loaded`);
 
     // Anti-bot: simulate human-like delay before interaction
@@ -303,22 +304,45 @@ async function waitForStableContent(tabId, maxWait) {
 }
 
 // ─── Wait for Tab Load ───────────────────────────────────────
+// On Kiwi Browser, tabs initially load chrome://newtab before navigating.
+// We must wait for the tab to reach the ACTUAL target URL.
 
-function waitForTabLoad(tabId, timeoutMs = 45000) {
-  return new Promise((resolve, reject) => {
+function waitForTabLoad(tabId, targetUrl, timeoutMs = 60000) {
+  return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
-      // Don't reject on timeout — resolve anyway (page might be partially loaded)
       resolve();
     }, timeoutMs);
-    function listener(id, info) {
-      if (id === tabId && info.status === "complete") {
+
+    function isRealUrl(tabUrl) {
+      if (!tabUrl) return false;
+      // Reject chrome:// , about: , edge:// internal pages
+      if (tabUrl.startsWith("chrome://")) return false;
+      if (tabUrl.startsWith("about:")) return false;
+      if (tabUrl.startsWith("edge://")) return false;
+      if (tabUrl.startsWith("chrome-extension://")) return false;
+      return true;
+    }
+
+    function listener(id, info, tab) {
+      if (id !== tabId) return;
+      // Only resolve when status is "complete" AND the URL is real (not chrome://newtab)
+      if (info.status === "complete" && isRealUrl(tab?.url || info.url)) {
         chrome.tabs.onUpdated.removeListener(listener);
         clearTimeout(timeout);
         resolve();
       }
     }
     chrome.tabs.onUpdated.addListener(listener);
+
+    // Also check if the tab is already loaded (race condition)
+    chrome.tabs.get(tabId).then((tab) => {
+      if (tab.status === "complete" && isRealUrl(tab.url)) {
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(timeout);
+        resolve();
+      }
+    }).catch(() => {});
   });
 }
 
