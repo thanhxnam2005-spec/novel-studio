@@ -42,6 +42,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRightLeftIcon,
   CheckIcon,
+  ChevronDownIcon,
   ClipboardCopyIcon,
   ClipboardListIcon,
   DownloadIcon,
@@ -75,6 +76,7 @@ export default function ConvertPage() {
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const [lastProcessedIndex, setLastProcessedIndex] = useState(0);
   const [isAutoNext, setIsAutoNext] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -512,18 +514,30 @@ Dịch chương truyện được cung cấp sang Tiếng Việt. Ưu tiên sự
 
       {/* ── Interactive Preview & Quick Fix ── */}
       {segments.length > 0 && (
-        <div className="mt-4 rounded-md border bg-muted/20 p-4">
-          <div className="mb-2 flex items-center justify-between">
+        <div className="mt-4 rounded-md border bg-muted/20 overflow-hidden">
+          <button 
+            onClick={() => setShowPreview(!showPreview)}
+            className="flex w-full items-center justify-between p-3 hover:bg-muted/40 transition-colors"
+          >
             <h3 className="text-sm font-medium flex items-center gap-2">
               <SparklesIcon className="size-3.5 text-primary" />
-              Xem trước & Sửa nhanh (Click vào từ để sửa)
+              Xem trước & Sửa nhanh (Bấm để {showPreview ? 'ẩn' : 'hiện'})
             </h3>
-          </div>
-          <SegmentRenderer
-            segments={segments}
-            onRefresh={handleConvert}
-            className="text-sm sm:text-base font-serif"
-          />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground uppercase">{segments.length} segments</span>
+              <ChevronDownIcon className={cn("size-4 transition-transform", showPreview && "rotate-180")} />
+            </div>
+          </button>
+          
+          {showPreview && (
+            <div className="p-4 border-t bg-background/50">
+              <SegmentRenderer
+                segments={segments}
+                onRefresh={handleConvert}
+                className="text-sm sm:text-base font-serif"
+              />
+            </div>
+          )}
         </div>
       )}
 
