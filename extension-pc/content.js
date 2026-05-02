@@ -1,1 +1,106 @@
-function a0_0x586b(){const _0x487609=['6782620ssueUt','replace','3MbtIyk','378KTNOfE','includes','ran','STV_PAGE_LOADED','1955945Wkijbf','log','forEach','split','innerText','STV_CONTENT_READY','trim','href','querySelectorAll','#content-container\x20.contentbox','EXTRACT_NOW','%c[Extractor]\x20v4.1\x20ready!','7388181UpetSN','Chương\x20sau','color:lime;font-size:14px','color:cyan;font-size:14px','title','startsWith','hasAttribute','onMessage','3593488YGbzxw','2qajjKx','sendMessage','length','87437GAcKIW','type','264790twybWI','addListener','%c[Extractor]\x20✅\x20','click','3008548sqEZPz','[Extractor]\x20Click\x20\x22Chương\x20sau\x22\x20→\x20','querySelector'];a0_0x586b=function(){return _0x487609;};return a0_0x586b();}function a0_0x3cbb(_0x894459,_0x124628){_0x894459=_0x894459-0xdc;const _0x586b79=a0_0x586b();let _0x3cbb9a=_0x586b79[_0x894459];return _0x3cbb9a;}(function(_0x5a312f,_0x488b2d){const _0x4faccf=a0_0x3cbb,_0x5edf73=_0x5a312f();while(!![]){try{const _0x5ce852=parseInt(_0x4faccf(0xff))/0x1*(-parseInt(_0x4faccf(0xfa))/0x2)+parseInt(_0x4faccf(0xe0))/0x3*(-parseInt(_0x4faccf(0x103))/0x4)+-parseInt(_0x4faccf(0xe5))/0x5+-parseInt(_0x4faccf(0xe1))/0x6*(-parseInt(_0x4faccf(0xfd))/0x7)+-parseInt(_0x4faccf(0xf9))/0x8+parseInt(_0x4faccf(0xf1))/0x9+parseInt(_0x4faccf(0xde))/0xa;if(_0x5ce852===_0x488b2d)break;else _0x5edf73['push'](_0x5edf73['shift']());}catch(_0x3ac471){_0x5edf73['push'](_0x5edf73['shift']());}}}(a0_0x586b,0x68b02),(function(){'use strict';const _0x12d46e=a0_0x3cbb;let _0x5b549e=![];const _0x40ec6b=_0x5b7b1c=>{const _0xfb6cfd=a0_0x3cbb;return(_0x5b7b1c||'')['replace'](/[\u200B\u200C\u200D\uFEFF]/g,'')[_0xfb6cfd(0xdf)](/@Bạn đang đọc bản lưu trong hệ thống/g,'')[_0xfb6cfd(0xdf)](/Đang tải nội dung chương\.\.\./g,'')[_0xfb6cfd(0xdf)](/\n{3,}/g,'\x0a\x0a')['trim']();},_0x3367ab=()=>{const _0x176751=a0_0x3cbb,_0x3eda81=document[_0x176751(0xdd)](_0x176751(0xee));if(!_0x3eda81)return'';const _0x52e2b3=_0x40ec6b(_0x3eda81[_0x176751(0xe9)]);let _0x13540f='';return _0x3eda81[_0x176751(0xed)]('i')[_0x176751(0xe7)](_0x371180=>{const _0x984135=_0x176751;(_0x371180['id']&&_0x371180['id']['startsWith'](_0x984135(0xe3))||_0x371180['id']?.[_0x984135(0xf6)]('exran')||_0x371180[_0x984135(0xf7)]('h')||_0x371180['hasAttribute']('t')||_0x371180[_0x984135(0xf7)]('v'))&&(_0x13540f+=_0x371180['textContent']);}),_0x13540f=_0x40ec6b(_0x13540f),_0x13540f[_0x176751(0xfc)]>_0x52e2b3['length']?_0x13540f:_0x52e2b3;},_0x4b5a10=_0x1c3c02=>{const _0x45a8bb=a0_0x3cbb;if(_0x5b549e||_0x1c3c02[_0x45a8bb(0xfc)]<0xc8)return;_0x5b549e=!![];const _0x33f2a8=(document['title']||'')['split'](/\s+-\s+/)[0x0]?.[_0x45a8bb(0xeb)]()||'';chrome['runtime'][_0x45a8bb(0xfb)]({'type':_0x45a8bb(0xea),'content':_0x1c3c02,'title':_0x33f2a8,'url':location[_0x45a8bb(0xec)],'length':_0x1c3c02['length']}),console[_0x45a8bb(0xe6)](_0x45a8bb(0x101)+_0x1c3c02[_0x45a8bb(0xfc)]+'\x20ký\x20tự\x20—\x20'+_0x33f2a8,_0x45a8bb(0xf3));},_0x3a883c=()=>{const _0x3f76e3=a0_0x3cbb,_0x9bc3f8=document[_0x3f76e3(0xed)]('a');for(const _0xd35149 of _0x9bc3f8){const _0xd52352=(_0xd35149['textContent']||'')[_0x3f76e3(0xeb)]();if(_0xd52352[_0x3f76e3(0xe2)](_0x3f76e3(0xf2)))return console['log'](_0x3f76e3(0xdc)+_0xd35149[_0x3f76e3(0xec)]),_0xd35149[_0x3f76e3(0x102)](),!![];}return![];},_0xe5ae8d=()=>{const _0x373f8d=a0_0x3cbb;if(_0x5b549e)return;const _0x11ddda=_0x3367ab();_0x11ddda[_0x373f8d(0xfc)]>0xc8&&_0x4b5a10(_0x11ddda);},_0x594c1d=()=>{for(let _0x1881b4=0x0;_0x1881b4<0xf;_0x1881b4++){setTimeout(_0xe5ae8d,0x5dc+_0x1881b4*0x3e8);}};_0x594c1d(),chrome['runtime'][_0x12d46e(0xf8)][_0x12d46e(0x100)]((_0x29dde5,_0x5b5e96,_0x21a26e)=>{const _0x3f5205=_0x12d46e;if(_0x29dde5['type']===_0x3f5205(0xef)){_0x5b549e=![];const _0x27ed3d=_0x585b40=>{const _0x5b1e6b=_0x3f5205;if(_0x585b40<=0x0){_0x21a26e({'content':'','length':0x0});return;}const _0x43bea2=_0x3367ab();if(_0x43bea2[_0x5b1e6b(0xfc)]>0xc8){const _0x480c84=(document[_0x5b1e6b(0xf5)]||'')[_0x5b1e6b(0xe8)](/\s+-\s+/)[0x0]?.['trim']()||'';_0x21a26e({'content':_0x43bea2,'title':_0x480c84,'length':_0x43bea2['length'],'url':location[_0x5b1e6b(0xec)]});}else setTimeout(()=>_0x27ed3d(_0x585b40-0x1),0x3e8);};return setTimeout(()=>_0x27ed3d(0xc),0x5dc),!![];}if(_0x29dde5[_0x3f5205(0xfe)]==='GO_NEXT'){console['log']('[Extractor]\x20→\x20GO_NEXT');const _0x4d7e73=_0x3a883c();return _0x21a26e({'ok':_0x4d7e73}),![];}}),chrome['runtime'][_0x12d46e(0xfb)]({'type':_0x12d46e(0xe4),'url':location['href']}),console['log'](_0x12d46e(0xf0),_0x12d46e(0xf4));}()));
+// content.js v4.1 — Clean Handshake Mode
+// Chỉ extract + gửi 1 lần duy nhất khi page load
+// Nhận GO_NEXT → click "Chương sau" → trang mới load → extract lại
+(function() {
+  'use strict';
+  let sent = false;
+
+  const cleanText = (text) => {
+    return (text || '')
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
+      .replace(/@Bạn đang đọc bản lưu trong hệ thống/g, '')
+      .replace(/Đang tải nội dung chương\.\.\./g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
+  const doExtract = () => {
+    const box = document.querySelector('#content-container .contentbox');
+    if (!box) return '';
+    const inner = cleanText(box.innerText);
+    let obf = '';
+    box.querySelectorAll('i').forEach(el => {
+      if ((el.id && el.id.startsWith('ran')) || el.id?.startsWith('exran') ||
+          el.hasAttribute('h') || el.hasAttribute('t') || el.hasAttribute('v')) {
+        obf += el.textContent;
+      }
+    });
+    obf = cleanText(obf);
+    return obf.length > inner.length ? obf : inner;
+  };
+
+  const sendToBackground = (content) => {
+    if (sent || content.length < 200) return;
+    sent = true;
+    const title = (document.title || '').split(/\s+-\s+/)[0]?.trim() || '';
+    chrome.runtime.sendMessage({
+      type: "STV_CONTENT_READY",
+      content, title, url: location.href, length: content.length
+    });
+    console.log(`%c[Extractor] ✅ ${content.length} ký tự — ${title}`, "color:lime;font-size:14px");
+  };
+
+  // Click "Chương sau >" — link CÓ SẴN trên trang STV
+  const clickNextChapter = () => {
+    const links = document.querySelectorAll('a');
+    for (const a of links) {
+      const text = (a.textContent || '').trim();
+      if (text.includes('Chương sau')) {
+        console.log(`[Extractor] Click "Chương sau" → ${a.href}`);
+        a.click();
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Auto-extract khi page load (CHỈ 1 LẦN)
+  const autoExtract = () => {
+    if (sent) return;
+    const content = doExtract();
+    if (content.length > 200) {
+      sendToBackground(content);
+    }
+  };
+
+  // Polling: thử extract nhiều lần cho đến khi có nội dung
+  const startPolling = () => {
+    for (let i = 0; i < 15; i++) {
+      setTimeout(autoExtract, 1500 + i * 1000);
+    }
+  };
+
+  startPolling();
+
+  // ========== LISTEN FOR COMMANDS ==========
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    // Background yêu cầu extract
+    if (msg.type === "EXTRACT_NOW") {
+      sent = false; // Reset để cho phép extract lại
+      const tryExtract = (n) => {
+        if (n <= 0) { sendResponse({ content: '', length: 0 }); return; }
+        const content = doExtract();
+        if (content.length > 200) {
+          const title = (document.title || '').split(/\s+-\s+/)[0]?.trim() || '';
+          sendResponse({ content, title, length: content.length, url: location.href });
+        } else {
+          setTimeout(() => tryExtract(n - 1), 1000);
+        }
+      };
+      setTimeout(() => tryExtract(12), 1500);
+      return true; // Async response
+    }
+
+    // Background yêu cầu chuyển chương
+    if (msg.type === "GO_NEXT") {
+      console.log("[Extractor] → GO_NEXT");
+      const ok = clickNextChapter();
+      sendResponse({ ok });
+      return false;
+    }
+  });
+
+  // Báo page đã load
+  chrome.runtime.sendMessage({ type: "STV_PAGE_LOADED", url: location.href });
+  console.log('%c[Extractor] v4.1 ready!', 'color:cyan;font-size:14px');
+})();

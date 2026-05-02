@@ -1,1 +1,225 @@
-const a0_0x4ae19d=a0_0x2ba0;(function(_0xfbf1f3,_0x46a6bc){const _0x4190f3=a0_0x2ba0,_0x2443ef=_0xfbf1f3();while(!![]){try{const _0x110ae7=parseInt(_0x4190f3(0xe8))/0x1+parseInt(_0x4190f3(0xef))/0x2*(parseInt(_0x4190f3(0xeb))/0x3)+-parseInt(_0x4190f3(0xea))/0x4*(parseInt(_0x4190f3(0x12b))/0x5)+parseInt(_0x4190f3(0xe6))/0x6*(-parseInt(_0x4190f3(0x10e))/0x7)+parseInt(_0x4190f3(0x101))/0x8*(parseInt(_0x4190f3(0xde))/0x9)+parseInt(_0x4190f3(0x122))/0xa*(parseInt(_0x4190f3(0x119))/0xb)+-parseInt(_0x4190f3(0xe5))/0xc;if(_0x110ae7===_0x46a6bc)break;else _0x2443ef['push'](_0x2443ef['shift']());}catch(_0x19e9cf){_0x2443ef['push'](_0x2443ef['shift']());}}}(a0_0xb549,0xcecbf),console['log']('%c🚀\x20Novel\x20Studio\x20Connector\x20v4.1','color:lime;font-size:16px'));function a0_0x2ba0(_0x2a233a,_0x393af1){_0x2a233a=_0x2a233a-0xde;const _0xb549bb=a0_0xb549();let _0x2ba0f0=_0xb549bb[_0x2a233a];return _0x2ba0f0;}const contentCache=new Map();chrome['runtime']['onMessage'][a0_0x4ae19d(0x10f)]((_0x22aef4,_0x19f505)=>{const _0x2e95fe=a0_0x4ae19d;_0x22aef4['type']===_0x2e95fe(0x10a)&&_0x19f505[_0x2e95fe(0x106)]&&(console['log'](_0x2e95fe(0x117)+_0x22aef4[_0x2e95fe(0xee)]+_0x2e95fe(0xf1)+_0x22aef4[_0x2e95fe(0x115)]),contentCache[_0x2e95fe(0x129)](_0x19f505[_0x2e95fe(0x106)]['id'],{'content':_0x22aef4[_0x2e95fe(0xe1)],'title':_0x22aef4[_0x2e95fe(0x12e)],'url':_0x22aef4[_0x2e95fe(0x115)],'length':_0x22aef4[_0x2e95fe(0xee)],'timestamp':Date[_0x2e95fe(0x104)]()})),_0x22aef4[_0x2e95fe(0x102)]===_0x2e95fe(0x10c)&&_0x19f505[_0x2e95fe(0x106)]&&console[_0x2e95fe(0x10b)](_0x2e95fe(0xe9)+_0x22aef4[_0x2e95fe(0x115)]);}),chrome[a0_0x4ae19d(0xfd)]['onMessageExternal'][a0_0x4ae19d(0x10f)]((_0x5b6b04,_0x301888,_0x480f21)=>{const _0x4f6c1b=a0_0x4ae19d;if(_0x5b6b04[_0x4f6c1b(0x102)]===_0x4f6c1b(0x103)||_0x5b6b04[_0x4f6c1b(0x11e)]===_0x4f6c1b(0x135))return _0x480f21({'ok':!![],'version':chrome[_0x4f6c1b(0xfd)]['getManifest']()[_0x4f6c1b(0x121)],'success':!![],'status':'online'}),![];if(_0x5b6b04[_0x4f6c1b(0x11e)]===_0x4f6c1b(0xec))return stvFetchChapter(_0x5b6b04[_0x4f6c1b(0x118)],_0x480f21),!![];if(_0x5b6b04[_0x4f6c1b(0x11e)]===_0x4f6c1b(0x112))return downloadAllSequential(_0x5b6b04[_0x4f6c1b(0x118)],_0x480f21),!![];if(_0x5b6b04[_0x4f6c1b(0x102)]===_0x4f6c1b(0x125))return handleFetch(_0x5b6b04[_0x4f6c1b(0x115)],_0x5b6b04[_0x4f6c1b(0x105)],_0x5b6b04[_0x4f6c1b(0xff)],_0x5b6b04['timeout']||0x3a98)[_0x4f6c1b(0x107)](_0x20e003=>_0x480f21({'ok':!![],..._0x20e003}))[_0x4f6c1b(0x113)](_0x4259b2=>_0x480f21({'ok':![],'error':_0x4259b2[_0x4f6c1b(0x12f)]})),!![];return![];});async function findSTVTab(){const _0x527764=a0_0x4ae19d,_0x18b31c=await chrome['tabs'][_0x527764(0x11d)]({'url':'*://sangtacviet.com/*'});return _0x18b31c[_0x527764(0xee)]>0x0?_0x18b31c[0x0]['id']:null;}async function stvFetchChapter(_0xd34811,_0x2a40ba){const _0x1a9db7=a0_0x4ae19d;try{const _0x1af682=await findSTVTab();if(!_0x1af682){_0x2a40ba({'success':![],'error':_0x1a9db7(0x11a)});return;}let _0x51840f='',_0x433a42='';for(let _0x375b1a=0x0;_0x375b1a<0x28;_0x375b1a++){const _0x171a21=contentCache[_0x1a9db7(0xed)](_0x1af682);if(_0x171a21&&_0x171a21[_0x1a9db7(0xee)]>0xc8){_0x51840f=_0x171a21[_0x1a9db7(0xe1)],_0x433a42=_0x171a21[_0x1a9db7(0x12e)],contentCache[_0x1a9db7(0x12d)](_0x1af682);break;}if(_0x375b1a===0x6)try{const _0x4be418=await chrome[_0x1a9db7(0x109)][_0x1a9db7(0xe0)](_0x1af682,{'type':_0x1a9db7(0xf9)});if(_0x4be418&&_0x4be418[_0x1a9db7(0xee)]>0xc8){_0x51840f=_0x4be418[_0x1a9db7(0xe1)],_0x433a42=_0x4be418[_0x1a9db7(0x12e)];break;}}catch{}await delay(0x1f4);}console[_0x1a9db7(0x10b)](_0x1a9db7(0x134)+_0x51840f[_0x1a9db7(0xee)]+_0x1a9db7(0x124)),contentCache['delete'](_0x1af682);try{await chrome[_0x1a9db7(0x109)][_0x1a9db7(0xe0)](_0x1af682,{'type':_0x1a9db7(0x110)}),await waitForTabLoad(_0x1af682,0x61a8);for(let _0x2211f0=0x0;_0x2211f0<0x1e;_0x2211f0++){if(contentCache[_0x1a9db7(0x111)](_0x1af682)){console[_0x1a9db7(0x10b)](_0x1a9db7(0xdf));break;}await delay(0x1f4);}}catch(_0x46ae54){console[_0x1a9db7(0x10b)]('[STV]\x20GO_NEXT:',_0x46ae54[_0x1a9db7(0x12f)]||_0x1a9db7(0xf2));}_0x2a40ba({'success':!![],'content':_0x51840f,'contentText':_0x51840f,'data':'','length':_0x51840f['length'],'title':_0x433a42,'timedOut':_0x51840f[_0x1a9db7(0xee)]<0xc8});}catch(_0x1cba88){_0x2a40ba({'success':![],'error':_0x1cba88[_0x1a9db7(0x12f)]});}}async function downloadAllSequential({chapters:_0x5a3282,delay:_0x9457c0=0x3e8},_0x49738a){const _0x3e0612=a0_0x4ae19d,_0x350e87=[];for(let _0x52054e=0x0;_0x52054e<_0x5a3282[_0x3e0612(0xee)];_0x52054e++){const _0x13ab1f=_0x5a3282[_0x52054e];console['log']('['+(_0x52054e+0x1)+'/'+_0x5a3282['length']+']\x20'+_0x13ab1f[_0x3e0612(0x12e)]);const _0x4f45ca=await new Promise(_0x3a0f86=>stvFetchChapter({'chapterUrl':_0x13ab1f[_0x3e0612(0x115)]},_0x3a0f86));_0x350e87[_0x3e0612(0x12a)]({'chapter':_0x13ab1f,..._0x4f45ca});}_0x49738a({'success':!![],'results':_0x350e87});}async function handleFetch(_0x41313f,_0x24ac24,_0x55c4b6,_0x1bbcad){const _0x51a0b3=a0_0x4ae19d,_0x50d7d7=await chrome[_0x51a0b3(0x109)][_0x51a0b3(0xf0)]({'url':_0x41313f,'active':![]}),_0x2039a9=_0x50d7d7['id'];try{await waitForTabLoad(_0x2039a9,0x7530),await injectStealth(_0x2039a9),await delay(0x3e8+Math[_0x51a0b3(0xf5)]()*0x5dc);let _0x4e0628=![];if(_0x55c4b6&&_0x24ac24)for(let _0x4c7f7c=0x0;_0x4c7f7c<0x3;_0x4c7f7c++){try{await chrome['scripting']['executeScript']({'target':{'tabId':_0x2039a9},'args':[_0x55c4b6],'func':_0x258c7d=>{const _0x4650c0=_0x51a0b3,_0x5cbdf2=document[_0x4650c0(0xfb)](_0x258c7d);if(_0x5cbdf2)_0x5cbdf2[_0x4650c0(0x132)]();}});}catch{}if(!await waitForSelector(_0x2039a9,_0x24ac24,Math[_0x51a0b3(0x108)](_0x1bbcad/0x3),0xc8)){_0x4e0628=![];break;}_0x4e0628=!![],await delay(0x1f4);}else _0x24ac24?_0x4e0628=await waitForSelector(_0x2039a9,_0x24ac24,_0x1bbcad,0xc8):await waitForStableContent(_0x2039a9,_0x1bbcad);const _0x203c94=await chrome[_0x51a0b3(0xf4)][_0x51a0b3(0x123)]({'target':{'tabId':_0x2039a9},'args':[_0x24ac24||null],'func':_0x242be7=>{const _0x3aa0cc=_0x51a0b3,_0x25bee2=_0x3aa0cc(0x131)+document[_0x3aa0cc(0xf7)][_0x3aa0cc(0x116)]+_0x3aa0cc(0x137)+document[_0x3aa0cc(0x128)][_0x3aa0cc(0x138)]+_0x3aa0cc(0x133);let _0x3398d8=null;if(_0x242be7){const _0x356506=document[_0x3aa0cc(0xfb)](_0x242be7);if(_0x356506)_0x3398d8=_0x356506[_0x3aa0cc(0x136)];}return{'html':_0x25bee2,'contentText':_0x3398d8};}}),_0xaf0c1c=_0x203c94?.[0x0]?.[_0x51a0b3(0xf8)];if(!_0xaf0c1c)throw new Error(_0x51a0b3(0xf3));return{'html':_0xaf0c1c[_0x51a0b3(0x100)],'contentText':_0xaf0c1c[_0x51a0b3(0x139)],'timedOut':_0x4e0628};}finally{try{await chrome[_0x51a0b3(0x109)][_0x51a0b3(0x11b)](_0x2039a9);}catch{}}}async function injectStealth(_0x58bfdd){const _0x1f1798=a0_0x4ae19d;try{await chrome[_0x1f1798(0xf4)][_0x1f1798(0x123)]({'target':{'tabId':_0x58bfdd},'world':_0x1f1798(0xfa),'func':()=>{const _0x2c5128=_0x1f1798;Object[_0x2c5128(0xe7)](navigator,'webdriver',{'get':()=>undefined,'configurable':!![]}),Object['defineProperty'](document,_0x2c5128(0xe3),{'get':()=>![],'configurable':!![]}),Object[_0x2c5128(0xe7)](document,_0x2c5128(0x10d),{'get':()=>_0x2c5128(0x11f),'configurable':!![]}),Document[_0x2c5128(0xe4)]['hasFocus']=()=>!![],document[_0x2c5128(0x120)]('visibilitychange',_0x37c4cd=>_0x37c4cd['stopImmediatePropagation'](),!![]);}});}catch{}}async function waitForSelector(_0x136a0e,_0x12e0dc,_0x342404,_0x4b40f8){const _0x9147b7=a0_0x4ae19d,_0x255b60=Date['now']();while(Date[_0x9147b7(0x104)]()-_0x255b60<_0x342404){try{const _0x338de6=await chrome['scripting'][_0x9147b7(0x123)]({'target':{'tabId':_0x136a0e},'args':[_0x12e0dc],'func':_0x55080c=>{const _0x4e7887=_0x9147b7,_0x558d64=document[_0x4e7887(0xfb)](_0x55080c);if(!_0x558d64)return 0x0;const _0x2a32d5=_0x558d64[_0x4e7887(0x130)](!![]);return _0x2a32d5[_0x4e7887(0xfc)](_0x4e7887(0xfe))['forEach'](_0xa85bbc=>_0xa85bbc['remove']()),_0x2a32d5['textContent'][_0x4e7887(0x126)]()[_0x4e7887(0xee)];}});if((_0x338de6?.[0x0]?.[_0x9147b7(0xf8)]??0x0)>_0x4b40f8)return![];}catch{}await delay(0x1f4);}return!![];}function a0_0xb549(){const _0x51e916=['STV_CONTENT_READY','log','STV_PAGE_LOADED','visibilityState','9611847ZcEOCm','addListener','GO_NEXT','has','downloadAllSequential','catch','complete','url','outerHTML','[BG]\x20✅\x20Cache:\x20','payload','22yJySdI','Mở\x201\x20tab\x20SangTacViet\x20trước!','remove','removeListener','query','action','visible','addEventListener','version','889810zsrBPJ','executeScript','\x20chars\x20for\x20current\x20page','FETCH','trim','onRemoved','body','set','push','29450kZFVAY','onUpdated','delete','title','message','cloneNode','<!DOCTYPE\x20html><html>','click','</body></html>','[STV]\x20Got\x20','ping','innerText','<body>','innerHTML','contentText','27NnZulU','[STV]\x20✅\x20Next\x20page\x20cached!','sendMessage','content','textContent','hidden','prototype','4024008DJOJNP','6Ubexea','defineProperty','868719TBhoxi','[BG]\x20Page\x20loaded:\x20','488rubCtA','15EALJni','downloadChapter','get','length','597856YlQGEG','create','\x20chars\x20—\x20','no\x20next\x20chapter','Failed\x20to\x20extract','scripting','random','forEach','head','result','EXTRACT_NOW','MAIN','querySelector','querySelectorAll','runtime','script,style,noscript','clickSelector','html','1954008cjrkQF','type','PING','now','waitSelector','tab','then','floor','tabs'];a0_0xb549=function(){return _0x51e916;};return a0_0xb549();}async function waitForStableContent(_0x516e7c,_0x43a4b3){const _0x21a148=a0_0x4ae19d,_0x36efd4=Date[_0x21a148(0x104)]();let _0x4b6694=0x0,_0x481077=0x0;await delay(0x5dc);while(Date[_0x21a148(0x104)]()-_0x36efd4<_0x43a4b3){try{const _0x51177f=await chrome[_0x21a148(0xf4)][_0x21a148(0x123)]({'target':{'tabId':_0x516e7c},'func':()=>{const _0x95ee33=_0x21a148,_0x5e19c5=document['body']['cloneNode'](!![]);return _0x5e19c5[_0x95ee33(0xfc)]('script,style,noscript')[_0x95ee33(0xf6)](_0x131e81=>_0x131e81[_0x95ee33(0x11b)]()),_0x5e19c5[_0x95ee33(0xe2)][_0x95ee33(0x126)]()['length'];}}),_0x28f237=_0x51177f?.[0x0]?.[_0x21a148(0xf8)]??0x0;if(_0x28f237===_0x4b6694&&_0x28f237>0x0){_0x481077++;if(_0x481077>=0x2)return;}else _0x481077=0x0;_0x4b6694=_0x28f237;}catch{}await delay(0x1f4);}}function waitForTabLoad(_0x55b6bd,_0x333abe){return new Promise(_0x3c8ec1=>{const _0x4d59fd=a0_0x2ba0,_0x372f6f=setTimeout(()=>{const _0x4f6c30=a0_0x2ba0;chrome[_0x4f6c30(0x109)]['onUpdated'][_0x4f6c30(0x11c)](_0x15d072),_0x3c8ec1();},_0x333abe);function _0x15d072(_0x1b7370,_0x585463){const _0x3bfe87=a0_0x2ba0;_0x1b7370===_0x55b6bd&&_0x585463['status']===_0x3bfe87(0x114)&&(chrome[_0x3bfe87(0x109)][_0x3bfe87(0x12c)][_0x3bfe87(0x11c)](_0x15d072),clearTimeout(_0x372f6f),_0x3c8ec1());}chrome[_0x4d59fd(0x109)][_0x4d59fd(0x12c)][_0x4d59fd(0x10f)](_0x15d072);});}function delay(_0xe239d9){return new Promise(_0x482ce3=>setTimeout(_0x482ce3,_0xe239d9));}chrome[a0_0x4ae19d(0x109)][a0_0x4ae19d(0x127)]['addListener'](_0x325a7e=>{const _0x19ae7c=a0_0x4ae19d;contentCache[_0x19ae7c(0x12d)](_0x325a7e);});
+// Novel Studio Connector v4.1 — Clean Handshake
+// Flow: App gọi → Extension trả content → App gọi tiếp → Extension chuyển chương + trả
+console.log("%c🚀 Novel Studio Connector v4.1", "color:lime;font-size:16px");
+
+const contentCache = new Map();
+
+// Content.js gửi nội dung → cache
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "STV_CONTENT_READY" && sender.tab) {
+    console.log(`[BG] ✅ Cache: ${msg.length} chars — ${msg.url}`);
+    contentCache.set(sender.tab.id, {
+      content: msg.content, title: msg.title,
+      url: msg.url, length: msg.length, timestamp: Date.now()
+    });
+  }
+  if (msg.type === "STV_PAGE_LOADED" && sender.tab) {
+    console.log(`[BG] Page loaded: ${msg.url}`);
+  }
+});
+
+// ====================== WEB APP MESSAGES ======================
+chrome.runtime.onMessageExternal.addListener((request, _sender, sendResponse) => {
+  if (request.type === "PING" || request.action === "ping") {
+    sendResponse({ ok: true, version: chrome.runtime.getManifest().version, success: true, status: "online" });
+    return false;
+  }
+  if (request.action === "downloadChapter") {
+    stvFetchChapter(request.payload, sendResponse);
+    return true;
+  }
+  if (request.action === "downloadAllSequential") {
+    downloadAllSequential(request.payload, sendResponse);
+    return true;
+  }
+  if (request.type === "FETCH") {
+    handleFetch(request.url, request.waitSelector, request.clickSelector, request.timeout || 15000)
+      .then((r) => sendResponse({ ok: true, ...r }))
+      .catch((e) => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+  return false;
+});
+
+// ====================== STV CHAPTER FETCH ======================
+// Handshake: App gọi → lấy content hiện tại → chuyển chương → respond
+// Lần gọi tiếp: cache đã có chương mới → lấy → chuyển → respond
+
+async function findSTVTab() {
+  const tabs = await chrome.tabs.query({ url: "*://sangtacviet.com/*" });
+  return tabs.length > 0 ? tabs[0].id : null;
+}
+
+async function stvFetchChapter(payload, sendResponse) {
+  try {
+    const tabId = await findSTVTab();
+    if (!tabId) {
+      sendResponse({ success: false, error: "Mở 1 tab SangTacViet trước!" });
+      return;
+    }
+
+    // 1. Lấy content từ cache (content.js đã auto-extract khi page load)
+    let content = '', title = '';
+
+    // Đợi cache (tối đa 20s)
+    for (let i = 0; i < 40; i++) {
+      const cached = contentCache.get(tabId);
+      if (cached && cached.length > 200) {
+        content = cached.content;
+        title = cached.title;
+        contentCache.delete(tabId);
+        break;
+      }
+      // Sau 3s không có cache, thử hỏi trực tiếp
+      if (i === 6) {
+        try {
+          const resp = await chrome.tabs.sendMessage(tabId, { type: "EXTRACT_NOW" });
+          if (resp && resp.length > 200) {
+            content = resp.content;
+            title = resp.title;
+            break;
+          }
+        } catch {}
+      }
+      await delay(500);
+    }
+
+    console.log(`[STV] Got ${content.length} chars for current page`);
+
+    // 2. Click "Chương sau" → chuẩn bị cho lần gọi tiếp
+    contentCache.delete(tabId);
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: "GO_NEXT" });
+      // Đợi trang mới load + content.js extract
+      await waitForTabLoad(tabId, 25000);
+      // Đợi cache được fill bởi content.js
+      for (let i = 0; i < 30; i++) {
+        if (contentCache.has(tabId)) {
+          console.log("[STV] ✅ Next page cached!");
+          break;
+        }
+        await delay(500);
+      }
+    } catch (e) {
+      console.log("[STV] GO_NEXT:", e.message || "no next chapter");
+    }
+
+    // 3. Trả kết quả
+    sendResponse({
+      success: true, content, contentText: content,
+      data: '', length: content.length,
+      title, timedOut: content.length < 200
+    });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function downloadAllSequential({ chapters, delay: d = 1000 }, sendResponse) {
+  const results = [];
+  for (let i = 0; i < chapters.length; i++) {
+    const ch = chapters[i];
+    console.log(`[${i+1}/${chapters.length}] ${ch.title}`);
+    const res = await new Promise(r => stvFetchChapter({ chapterUrl: ch.url }, r));
+    results.push({ chapter: ch, ...res });
+  }
+  sendResponse({ success: true, results });
+}
+
+// ====================== STANDARD FETCH (non-STV) ======================
+async function handleFetch(url, waitSelector, clickSelector, timeout) {
+  const tab = await chrome.tabs.create({ url, active: false });
+  const tabId = tab.id;
+  try {
+    await waitForTabLoad(tabId, 30000);
+    await injectStealth(tabId);
+    await delay(1000 + Math.random() * 1500);
+    let timedOut = false;
+    if (clickSelector && waitSelector) {
+      for (let i = 0; i < 3; i++) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId }, args: [clickSelector], func: (s) => {
+            const el = document.querySelector(s); if (el) el.click();
+          }});
+        } catch {}
+        if (!(await waitForSelector(tabId, waitSelector, Math.floor(timeout/3), 200))) { timedOut = false; break; }
+        timedOut = true; await delay(500);
+      }
+    } else if (waitSelector) {
+      timedOut = await waitForSelector(tabId, waitSelector, timeout, 200);
+    } else {
+      await waitForStableContent(tabId, timeout);
+    }
+    const results = await chrome.scripting.executeScript({
+      target: { tabId }, args: [waitSelector || null],
+      func: (s) => {
+        const html = "<!DOCTYPE html><html>" + document.head.outerHTML + "<body>" + document.body.innerHTML + "</body></html>";
+        let contentText = null;
+        if (s) { const el = document.querySelector(s); if (el) contentText = el.innerText; }
+        return { html, contentText };
+      },
+    });
+    const data = results?.[0]?.result;
+    if (!data) throw new Error("Failed to extract");
+    return { html: data.html, contentText: data.contentText, timedOut };
+  } finally { try { await chrome.tabs.remove(tabId); } catch {} }
+}
+
+// ====================== HELPERS ======================
+async function injectStealth(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: () => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+        Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+        Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+        Document.prototype.hasFocus = () => true;
+        document.addEventListener('visibilitychange', e => e.stopImmediatePropagation(), true);
+      },
+    });
+  } catch {}
+}
+async function waitForSelector(tabId, sel, maxWait, minLen) {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    try {
+      const r = await chrome.scripting.executeScript({ target: { tabId }, args: [sel], func: (s) => {
+        const el = document.querySelector(s); if (!el) return 0;
+        const c = el.cloneNode(true); c.querySelectorAll("script,style,noscript").forEach(x => x.remove());
+        return c.textContent.trim().length;
+      }});
+      if ((r?.[0]?.result ?? 0) > minLen) return false;
+    } catch {}
+    await delay(500);
+  }
+  return true;
+}
+async function waitForStableContent(tabId, maxWait) {
+  const start = Date.now(); let last = 0, stable = 0;
+  await delay(1500);
+  while (Date.now() - start < maxWait) {
+    try {
+      const r = await chrome.scripting.executeScript({ target: { tabId }, func: () => {
+        const c = document.body.cloneNode(true); c.querySelectorAll("script,style,noscript").forEach(e => e.remove());
+        return c.textContent.trim().length;
+      }});
+      const len = r?.[0]?.result ?? 0;
+      if (len === last && len > 0) { stable++; if (stable >= 2) return; } else stable = 0;
+      last = len;
+    } catch {}
+    await delay(500);
+  }
+}
+function waitForTabLoad(tabId, ms) {
+  return new Promise(resolve => {
+    const t = setTimeout(() => { chrome.tabs.onUpdated.removeListener(fn); resolve(); }, ms);
+    function fn(id, info) {
+      if (id === tabId && info.status === "complete") { chrome.tabs.onUpdated.removeListener(fn); clearTimeout(t); resolve(); }
+    }
+    chrome.tabs.onUpdated.addListener(fn);
+  });
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+chrome.tabs.onRemoved.addListener((tabId) => { contentCache.delete(tabId); });

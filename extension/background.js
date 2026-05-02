@@ -1,1 +1,326 @@
-function a0_0x2c47(_0x3d2c58,_0x527702){_0x3d2c58=_0x3d2c58-0x1c6;const _0x1db9b0=a0_0x1db9();let _0x2c472a=_0x1db9b0[_0x3d2c58];return _0x2c472a;}const a0_0x478274=a0_0x2c47;(function(_0x138746,_0x4c8d8e){const _0x67fe92=a0_0x2c47,_0x492cf5=_0x138746();while(!![]){try{const _0x4abcc1=parseInt(_0x67fe92(0x209))/0x1+-parseInt(_0x67fe92(0x1e4))/0x2+parseInt(_0x67fe92(0x1f7))/0x3+-parseInt(_0x67fe92(0x1e3))/0x4*(parseInt(_0x67fe92(0x207))/0x5)+parseInt(_0x67fe92(0x218))/0x6+-parseInt(_0x67fe92(0x214))/0x7+-parseInt(_0x67fe92(0x1e6))/0x8*(-parseInt(_0x67fe92(0x213))/0x9);if(_0x4abcc1===_0x4c8d8e)break;else _0x492cf5['push'](_0x492cf5['shift']());}catch(_0x3da820){_0x492cf5['push'](_0x492cf5['shift']());}}}(a0_0x1db9,0x7b5b3));let isKiwi=![];try{(!chrome[a0_0x478274(0x217)]||typeof chrome[a0_0x478274(0x217)][a0_0x478274(0x1da)]!==a0_0x478274(0x1e1))&&(isKiwi=!![]);}catch{isKiwi=!![];}function randomDelay(_0x454522,_0x4282c5){const _0x44575a=a0_0x478274;return new Promise(_0x34bc65=>setTimeout(_0x34bc65,_0x454522+Math[_0x44575a(0x1d4)]()*(_0x4282c5-_0x454522)));}chrome[a0_0x478274(0x1fe)][a0_0x478274(0x1d7)][a0_0x478274(0x1fa)]((_0x51fb7c,_0x3a86d3,_0x3ca59f)=>{const _0x171b4d=a0_0x478274;if(_0x51fb7c[_0x171b4d(0x1fd)]===_0x171b4d(0x1d6))return _0x3ca59f({'ok':!![],'version':chrome[_0x171b4d(0x1fe)][_0x171b4d(0x1d9)]()[_0x171b4d(0x1e7)]}),![];if(_0x51fb7c[_0x171b4d(0x1fd)]==='FETCH')return handleFetch(_0x51fb7c[_0x171b4d(0x20a)],_0x51fb7c[_0x171b4d(0x1d8)],_0x51fb7c[_0x171b4d(0x1ed)],_0x51fb7c[_0x171b4d(0x215)]||0x3a98)[_0x171b4d(0x205)](_0x509a86=>_0x3ca59f({'ok':!![],..._0x509a86}))[_0x171b4d(0x1d1)](_0x4ae44d=>_0x3ca59f({'ok':![],'error':_0x4ae44d[_0x171b4d(0x1f9)]})),!![];return _0x3ca59f({'ok':![],'error':_0x171b4d(0x1cb)}),![];}),chrome['runtime']['onMessage'][a0_0x478274(0x1fa)]((_0x5bd4e1,_0x4b75a7,_0x1e4702)=>{const _0x2c55b0=a0_0x478274;if(_0x5bd4e1['type']===_0x2c55b0(0x1d6))return _0x1e4702({'ok':!![],'version':chrome[_0x2c55b0(0x1fe)][_0x2c55b0(0x1d9)]()[_0x2c55b0(0x1e7)]}),![];if(_0x5bd4e1['type']==='FETCH')return handleFetch(_0x5bd4e1[_0x2c55b0(0x20a)],_0x5bd4e1[_0x2c55b0(0x1d8)],_0x5bd4e1[_0x2c55b0(0x1ed)],_0x5bd4e1[_0x2c55b0(0x215)]||0x3a98)[_0x2c55b0(0x205)](_0x53895d=>_0x1e4702({'ok':!![],..._0x53895d}))[_0x2c55b0(0x1d1)](_0x1071b2=>_0x1e4702({'ok':![],'error':_0x1071b2[_0x2c55b0(0x1f9)]})),!![];return _0x1e4702({'ok':![],'error':_0x2c55b0(0x1cb)}),![];});async function handleFetch(_0xf9fc07,_0x5575ac,_0x5ba0af,_0x3a9042){const _0x4812c1=a0_0x478274,_0x326255=[],_0x598778=_0x3f1472=>{const _0x3ee08a=a0_0x2c47;_0x326255[_0x3ee08a(0x20b)]('['+new Date()[_0x3ee08a(0x1f1)]()+']\x20'+_0x3f1472);};let _0x549049,_0x1ca0b7;if(isKiwi){const _0x465378=await chrome[_0x4812c1(0x1e0)]['create']({'url':_0xf9fc07,'active':!![]});_0x549049=_0x465378['id'],_0x1ca0b7=null,_0x598778(_0x4812c1(0x202)+_0x549049+')'),await delay(0x1f4);try{const _0x1b8908=await chrome[_0x4812c1(0x1e0)]['get'](_0x549049);_0x598778(_0x4812c1(0x1cd)+_0x1b8908[_0x4812c1(0x20a)]),(!_0x1b8908[_0x4812c1(0x20a)]||_0x1b8908[_0x4812c1(0x20a)][_0x4812c1(0x1f0)](_0x4812c1(0x1cf))||_0x1b8908['url']==='about:blank')&&(_0x598778(_0x4812c1(0x1f3)),await chrome[_0x4812c1(0x1e0)][_0x4812c1(0x1d0)](_0x549049,{'url':_0xf9fc07}),_0x598778(_0x4812c1(0x1f6)+_0xf9fc07));}catch(_0x4adbd6){_0x598778(_0x4812c1(0x210)+_0x4adbd6[_0x4812c1(0x1f9)]);}}else{const _0xaf1167=await chrome['windows'][_0x4812c1(0x1da)]({'url':_0xf9fc07,'state':_0x4812c1(0x1cc)});_0x549049=_0xaf1167['tabs'][0x0]['id'],_0x1ca0b7=_0xaf1167['id'],_0x598778('tab\x20created\x20(minimized\x20window)');}try{await waitForRealPage(_0x549049,_0xf9fc07,0xea60,_0x598778),_0x598778(_0x4812c1(0x1d2));const _0x5d8c23=0x3e8+Math['random']()*0x5dc;await delay(_0x5d8c23),_0x598778('waited\x20'+Math['round'](_0x5d8c23)+_0x4812c1(0x21e)),await safeExecute(_0x549049,()=>{const _0x4de58a=_0x4812c1;window['scrollBy'](0x0,Math[_0x4de58a(0x21a)](Math[_0x4de58a(0x1d4)]()*0x12c)+0x64);const _0xd1b622=new MouseEvent(_0x4de58a(0x1ec),{'clientX':Math['floor'](Math['random']()*window[_0x4de58a(0x1fc)]),'clientY':Math[_0x4de58a(0x21a)](Math['random']()*window['innerHeight']),'bubbles':!![]});document[_0x4de58a(0x1df)](_0xd1b622);}),_0x598778('injected\x20human\x20behavior');let _0x4a32f1=![];if(_0x5ba0af&&_0x5575ac)_0x4a32f1=await clickAndWait(_0x549049,_0x5ba0af,_0x5575ac,_0x3a9042,_0x598778);else{if(_0x5ba0af)await robustClick(_0x549049,_0x5ba0af),_0x598778(_0x4812c1(0x219)+_0x5ba0af);else _0x5575ac?(_0x4a32f1=await waitForSelector(_0x549049,_0x5575ac,_0x3a9042,0xc8),_0x598778(_0x4a32f1?_0x4812c1(0x1f4)+_0x5575ac:_0x4812c1(0x20f)+_0x5575ac)):(await waitForStableContent(_0x549049,_0x3a9042),_0x598778(_0x4812c1(0x206)));}const _0x1f4688=await chrome[_0x4812c1(0x1d3)]['executeScript']({'target':{'tabId':_0x549049},'args':[_0x5575ac||null],'func':_0x3f592b=>{const _0x4d2caa=_0x4812c1,_0x2b86a7=_0x4d2caa(0x20d)+document['head']['outerHTML']+'<body>'+document[_0x4d2caa(0x1ee)]['innerHTML']+_0x4d2caa(0x1e9);let _0x6f6b=null;if(_0x3f592b){const _0x2e7800=document[_0x4d2caa(0x1f2)](_0x3f592b);if(_0x2e7800)_0x6f6b=_0x2e7800[_0x4d2caa(0x1ea)];}return{'html':_0x2b86a7,'contentText':_0x6f6b};}}),_0x3bf5ac=_0x1f4688?.[0x0]?.[_0x4812c1(0x1de)];if(!_0x3bf5ac)throw new Error('Failed\x20to\x20extract\x20page\x20content');return _0x598778(_0x4812c1(0x1c7)+_0x3bf5ac[_0x4812c1(0x1dd)][_0x4812c1(0x1dc)]+_0x4812c1(0x1ca)+(_0x3bf5ac['contentText']?.[_0x4812c1(0x1dc)]??0x0)+(_0x4a32f1?_0x4812c1(0x1eb):'')),{'html':_0x3bf5ac[_0x4812c1(0x1dd)],'contentText':_0x3bf5ac['contentText'],'timedOut':_0x4a32f1,'logs':_0x326255};}catch(_0x39b809){_0x598778(_0x4812c1(0x1db)+_0x39b809['message']);throw Object[_0x4812c1(0x1e2)](_0x39b809,{'logs':_0x326255});}finally{try{if(_0x1ca0b7)await chrome['windows']['remove'](_0x1ca0b7);else _0x549049&&await chrome[_0x4812c1(0x1e0)][_0x4812c1(0x212)](_0x549049);}catch{}}}async function safeExecute(_0x20161f,_0x620963,_0x43de19){const _0x30e613=a0_0x478274;try{const _0x541f07=await chrome[_0x30e613(0x1e0)][_0x30e613(0x20c)](_0x20161f);if(_0x541f07[_0x30e613(0x20a)]&&(_0x541f07[_0x30e613(0x20a)]['startsWith'](_0x30e613(0x1cf))||_0x541f07['url']['startsWith'](_0x30e613(0x20e))||_0x541f07['url'][_0x30e613(0x1f0)]('edge://')))return null;}catch{return null;}try{const _0x20f222=await chrome[_0x30e613(0x1d3)]['executeScript']({'target':{'tabId':_0x20161f},'func':_0x620963,'args':_0x43de19||[]});return _0x20f222?.[0x0]?.['result']??null;}catch{return null;}}async function waitForRealPage(_0x2f930e,_0x2dd405,_0x329f72,_0x51a665){const _0x2a20ba=a0_0x478274,_0x42c3bf=Date['now']();while(Date[_0x2a20ba(0x208)]()-_0x42c3bf<_0x329f72){try{const _0x4fa8d8=await chrome['tabs'][_0x2a20ba(0x20c)](_0x2f930e);if(_0x4fa8d8[_0x2a20ba(0x20a)]&&!_0x4fa8d8[_0x2a20ba(0x20a)][_0x2a20ba(0x1f0)](_0x2a20ba(0x1cf))&&!_0x4fa8d8[_0x2a20ba(0x20a)][_0x2a20ba(0x1f0)](_0x2a20ba(0x20e))&&_0x4fa8d8[_0x2a20ba(0x1f8)]==='complete'){_0x51a665(_0x2a20ba(0x1fb)+_0x4fa8d8[_0x2a20ba(0x20a)][_0x2a20ba(0x1ef)](0x0,0x50));return;}Date[_0x2a20ba(0x208)]()-_0x42c3bf>0x1388&&_0x4fa8d8[_0x2a20ba(0x20a)]&&(_0x4fa8d8[_0x2a20ba(0x20a)][_0x2a20ba(0x1f0)](_0x2a20ba(0x1cf))||_0x4fa8d8[_0x2a20ba(0x20a)]===_0x2a20ba(0x216))&&(_0x51a665(_0x2a20ba(0x1e5)+_0x4fa8d8[_0x2a20ba(0x20a)]+_0x2a20ba(0x203)),await chrome[_0x2a20ba(0x1e0)]['update'](_0x2f930e,{'url':_0x2dd405}));}catch{}await delay(0x3e8);}_0x51a665(_0x2a20ba(0x204)+_0x329f72+'ms');}async function clickAndWait(_0x4733dd,_0x2084e0,_0x5db092,_0x43014c,_0x356d22){const _0x9e0df=a0_0x478274,_0x350465=0x3,_0x45c845=Math['floor'](_0x43014c/_0x350465);for(let _0x551d95=0x0;_0x551d95<_0x350465;_0x551d95++){await robustClick(_0x4733dd,_0x2084e0),_0x356d22(_0x9e0df(0x211)+(_0x551d95+0x1)+'/'+_0x350465);const _0x32db53=await waitForSelector(_0x4733dd,_0x5db092,_0x45c845,0xc8);if(!_0x32db53)return _0x356d22(_0x9e0df(0x21c)+(_0x551d95+0x1)),![];_0x356d22(_0x9e0df(0x1ce)+(_0x551d95+0x1)+'\x20timeout\x20—\x20retrying'),await randomDelay(0x1f4,0x5dc);}return _0x356d22('all\x20click\x20attempts\x20exhausted'),!![];}async function robustClick(_0x355279,_0x5b2c69){await safeExecute(_0x355279,_0x10bd6a=>{const _0x4d6d97=a0_0x2c47,_0x403edd=document['querySelector'](_0x10bd6a);if(!_0x403edd)return;_0x403edd[_0x4d6d97(0x1ff)]();const _0x335601={'bubbles':!![],'cancelable':!![],'view':window};_0x403edd[_0x4d6d97(0x1df)](new MouseEvent(_0x4d6d97(0x21b),_0x335601)),_0x403edd[_0x4d6d97(0x1df)](new MouseEvent(_0x4d6d97(0x21d),_0x335601)),_0x403edd[_0x4d6d97(0x1df)](new MouseEvent(_0x4d6d97(0x1ff),_0x335601));if(typeof _0x403edd[_0x4d6d97(0x1d5)]==='function')_0x403edd[_0x4d6d97(0x1d5)]();},[_0x5b2c69]),await delay(0x1f4);}function a0_0x1db9(){const _0x49537c=['1683664biqbhf','tab\x20still\x20on\x20','136GeSdgR','version','querySelectorAll','</body></html>','innerText','\x20(TIMEOUT)','mousemove','clickSelector','body','substring','startsWith','toLocaleTimeString','querySelector','tab\x20stuck\x20on\x20internal\x20URL,\x20forcing\x20navigation...','wait\x20timeout:\x20','cloneNode','forced\x20navigation\x20to\x20','99807queYjk','status','message','addListener','tab\x20navigated\x20to:\x20','innerWidth','type','runtime','click','script,\x20style,\x20noscript','textContent','tab\x20created\x20(Kiwi\x20mode,\x20active\x20tab,\x20id=',',\x20forcing\x20navigation\x20again...','waitForRealPage\x20timeout\x20after\x20','then','content\x20stabilized','5VYuIGj','now','813803sZYMwM','url','push','get','<!DOCTYPE\x20html><html>','about:','content\x20ready:\x20','tab\x20check\x20failed:\x20','click\x20attempt\x20','remove','1019727szCxhA','5420107eizqBf','timeout','about:blank','windows','525180wqpEYe','clicked:\x20','floor','mousedown','content\x20loaded\x20after\x20attempt\x20','mouseup','ms\x20(anti-bot)','forEach','extracted:\x20html=','trim','script,style,noscript','\x20contentText=','Unknown\x20message\x20type','minimized','tab\x20url\x20after\x20create:\x20','attempt\x20','chrome://','update','catch','page\x20loaded','scripting','random','focus','PING','onMessageExternal','waitSelector','getManifest','create','error:\x20','length','html','result','dispatchEvent','tabs','function','assign','2957412xoteFU'];a0_0x1db9=function(){return _0x49537c;};return a0_0x1db9();}async function waitForSelector(_0x2500eb,_0x1d56f2,_0x3e31a9,_0x522d9f){const _0x152988=a0_0x478274,_0x3f7e0e=Date['now']();while(Date[_0x152988(0x208)]()-_0x3f7e0e<_0x3e31a9){const _0x12e8ad=await safeExecute(_0x2500eb,_0x9a6cb3=>{const _0xddc4dc=_0x152988,_0x31ffc7=document['querySelector'](_0x9a6cb3);if(!_0x31ffc7)return 0x0;const _0x194982=_0x31ffc7[_0xddc4dc(0x1f5)](!![]);return _0x194982[_0xddc4dc(0x1e8)](_0xddc4dc(0x200))[_0xddc4dc(0x1c6)](_0x2627bf=>_0x2627bf['remove']()),_0x194982[_0xddc4dc(0x201)][_0xddc4dc(0x1c8)]()[_0xddc4dc(0x1dc)];},[_0x1d56f2]);if(_0x12e8ad&&_0x12e8ad>_0x522d9f)return![];await delay(0x1f4);}return!![];}async function waitForStableContent(_0x1d684d,_0x12471d){const _0x28a38f=a0_0x478274,_0x41f654=Date[_0x28a38f(0x208)]();let _0x52511d=0x0,_0x9317ef=0x0;await delay(0x7d0);while(Date[_0x28a38f(0x208)]()-_0x41f654<_0x12471d){const _0x2011fe=await safeExecute(_0x1d684d,()=>{const _0x554ecc=_0x28a38f,_0x469079=document[_0x554ecc(0x1ee)][_0x554ecc(0x1f5)](!![]);return _0x469079[_0x554ecc(0x1e8)](_0x554ecc(0x1c9))[_0x554ecc(0x1c6)](_0x4427ef=>_0x4427ef[_0x554ecc(0x212)]()),_0x469079['textContent'][_0x554ecc(0x1c8)]()['length'];});if(_0x2011fe!==null){if(_0x2011fe===_0x52511d&&_0x2011fe>0x0){_0x9317ef++;if(_0x9317ef>=0x2)return;}else _0x9317ef=0x0;_0x52511d=_0x2011fe;}await delay(0x1f4);}}function delay(_0x267284){return new Promise(_0x31dfb4=>setTimeout(_0x31dfb4,_0x267284));}
+// Novel Studio Connector — Background Service Worker
+// v0.2.0: Anti-bot improvements + Kiwi Browser (mobile) support
+
+// ─── Kiwi Browser Compatibility ──────────────────────────────
+// Kiwi Browser on Android doesn't support chrome.windows API.
+// We detect this and use tab-based approach instead.
+
+let isKiwi = false;
+try {
+  // Kiwi doesn't have chrome.windows.create
+  if (!chrome.windows || typeof chrome.windows.create !== "function") {
+    isKiwi = true;
+  }
+} catch { isKiwi = true; }
+
+// ─── Anti-Bot: Random User Behavior ─────────────────────────
+
+function randomDelay(min, max) {
+  return new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+}
+
+// ─── Message Listener ────────────────────────────────────────
+
+chrome.runtime.onMessageExternal.addListener(
+  (request, _sender, sendResponse) => {
+    if (request.type === "PING") {
+      sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
+      return false;
+    }
+
+    if (request.type === "FETCH") {
+      handleFetch(
+        request.url,
+        request.waitSelector,
+        request.clickSelector,
+        request.timeout || 15000,
+      )
+        .then((result) => sendResponse({ ok: true, ...result }))
+        .catch((err) => sendResponse({ ok: false, error: err.message }));
+      return true; // keep channel open for async response
+    }
+
+    sendResponse({ ok: false, error: "Unknown message type" });
+    return false;
+  },
+);
+
+// ─── Also support internal messages (for Kiwi popup/content scripts) ──
+chrome.runtime.onMessage.addListener(
+  (request, _sender, sendResponse) => {
+    if (request.type === "PING") {
+      sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
+      return false;
+    }
+
+    if (request.type === "FETCH") {
+      handleFetch(
+        request.url,
+        request.waitSelector,
+        request.clickSelector,
+        request.timeout || 15000,
+      )
+        .then((result) => sendResponse({ ok: true, ...result }))
+        .catch((err) => sendResponse({ ok: false, error: err.message }));
+      return true;
+    }
+
+    sendResponse({ ok: false, error: "Unknown message type" });
+    return false;
+  },
+);
+
+// ─── Main Fetch Handler ──────────────────────────────────────
+
+async function handleFetch(url, waitSelector, clickSelector, timeout) {
+  const logs = [];
+  const log = (msg) => { logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`); };
+
+  let tabId, windowId;
+
+  if (isKiwi) {
+    // Kiwi Browser: create tab with active:true so it ACTUALLY navigates
+    const createdTab = await chrome.tabs.create({ url, active: true });
+    tabId = createdTab.id;
+    windowId = null;
+    log(`tab created (Kiwi mode, active tab, id=${tabId})`);
+
+    // Force navigation in case tab didn't navigate
+    await delay(500);
+    try {
+      const tabInfo = await chrome.tabs.get(tabId);
+      log(`tab url after create: ${tabInfo.url}`);
+      if (!tabInfo.url || tabInfo.url.startsWith("chrome://") || tabInfo.url === "about:blank") {
+        log(`tab stuck on internal URL, forcing navigation...`);
+        await chrome.tabs.update(tabId, { url });
+        log(`forced navigation to ${url}`);
+      }
+    } catch (e) {
+      log(`tab check failed: ${e.message}`);
+    }
+  } else {
+    // Desktop Chrome: create minimized window
+    const win = await chrome.windows.create({ url, state: "minimized" });
+    tabId = win.tabs[0].id;
+    windowId = win.id;
+    log(`tab created (minimized window)`);
+  }
+
+  try {
+    // Wait for the REAL page to load (not chrome://newtab)
+    await waitForRealPage(tabId, url, 60000, log);
+    log(`page loaded`);
+
+    // Anti-bot: simulate human-like delay before interaction
+    const initialDelay = 1000 + Math.random() * 1500;
+    await delay(initialDelay);
+    log(`waited ${Math.round(initialDelay)}ms (anti-bot)`);
+
+    // Anti-bot: scroll the page slightly to seem human
+    await safeExecute(tabId, () => {
+      window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
+      const event = new MouseEvent("mousemove", {
+        clientX: Math.floor(Math.random() * window.innerWidth),
+        clientY: Math.floor(Math.random() * window.innerHeight),
+        bubbles: true,
+      });
+      document.dispatchEvent(event);
+    });
+    log(`injected human behavior`);
+
+    let timedOut = false;
+    if (clickSelector && waitSelector) {
+      timedOut = await clickAndWait(tabId, clickSelector, waitSelector, timeout, log);
+    } else if (clickSelector) {
+      await robustClick(tabId, clickSelector);
+      log(`clicked: ${clickSelector}`);
+    } else if (waitSelector) {
+      timedOut = await waitForSelector(tabId, waitSelector, timeout, 200);
+      log(timedOut ? `wait timeout: ${waitSelector}` : `content ready: ${waitSelector}`);
+    } else {
+      await waitForStableContent(tabId, timeout);
+      log(`content stabilized`);
+    }
+
+    // Final extraction
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      args: [waitSelector || null],
+      func: (sel) => {
+        const html =
+          "<!DOCTYPE html><html>" +
+          document.head.outerHTML +
+          "<body>" +
+          document.body.innerHTML +
+          "</body></html>";
+
+        let contentText = null;
+        if (sel) {
+          const el = document.querySelector(sel);
+          if (el) contentText = el.innerText;
+        }
+
+        return { html, contentText };
+      },
+    });
+
+    const data = results?.[0]?.result;
+    if (!data) throw new Error("Failed to extract page content");
+
+    log(`extracted: html=${data.html.length} contentText=${data.contentText?.length ?? 0}${timedOut ? " (TIMEOUT)" : ""}`);
+    return { html: data.html, contentText: data.contentText, timedOut, logs };
+  } catch (err) {
+    log(`error: ${err.message}`);
+    throw Object.assign(err, { logs });
+  } finally {
+    try {
+      if (windowId) {
+        await chrome.windows.remove(windowId);
+      } else if (tabId) {
+        await chrome.tabs.remove(tabId);
+      }
+    } catch {}
+  }
+}
+
+// ─── Safe Script Execution ───────────────────────────────────
+// Wraps executeScript with URL check to avoid chrome:// errors
+
+async function safeExecute(tabId, func, args) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.url && (tab.url.startsWith("chrome://") || tab.url.startsWith("about:") || tab.url.startsWith("edge://"))) {
+      return null; // Skip — can't inject into internal pages
+    }
+  } catch { return null; }
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func,
+      args: args || [],
+    });
+    return results?.[0]?.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Wait for Real Page ──────────────────────────────────────
+// Polls until the tab URL is a real website (not chrome://) AND status is complete
+
+async function waitForRealPage(tabId, targetUrl, timeoutMs, log) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+
+      if (tab.url && !tab.url.startsWith("chrome://") && !tab.url.startsWith("about:") && tab.status === "complete") {
+        log(`tab navigated to: ${tab.url.substring(0, 80)}`);
+        return;
+      }
+
+      // If tab is stuck on chrome:// for more than 5 seconds, force navigate
+      if (Date.now() - start > 5000 && tab.url && (tab.url.startsWith("chrome://") || tab.url === "about:blank")) {
+        log(`tab still on ${tab.url}, forcing navigation again...`);
+        await chrome.tabs.update(tabId, { url: targetUrl });
+      }
+    } catch {
+      // Tab might not exist yet
+    }
+
+    await delay(1000);
+  }
+
+  log(`waitForRealPage timeout after ${timeoutMs}ms`);
+}
+
+// ─── Click + Wait with Retry ────────────────────────────────
+
+async function clickAndWait(tabId, clickSel, waitSel, timeout, log) {
+  const maxRetries = 3;
+  const perAttemptTimeout = Math.floor(timeout / maxRetries);
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    await robustClick(tabId, clickSel);
+    log(`click attempt ${attempt + 1}/${maxRetries}`);
+
+    const timedOut = await waitForSelector(tabId, waitSel, perAttemptTimeout, 200);
+
+    if (!timedOut) {
+      log(`content loaded after attempt ${attempt + 1}`);
+      return false;
+    }
+
+    log(`attempt ${attempt + 1} timeout — retrying`);
+    await randomDelay(500, 1500);
+  }
+
+  log("all click attempts exhausted");
+  return true;
+}
+
+// ─── Robust Click ────────────────────────────────────────────
+
+async function robustClick(tabId, selector) {
+  await safeExecute(tabId, (sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.click();
+    const opts = { bubbles: true, cancelable: true, view: window };
+    el.dispatchEvent(new MouseEvent("mousedown", opts));
+    el.dispatchEvent(new MouseEvent("mouseup", opts));
+    el.dispatchEvent(new MouseEvent("click", opts));
+    if (typeof el.focus === "function") el.focus();
+  }, [selector]);
+  await delay(500);
+}
+
+// ─── Wait for Selector ───────────────────────────────────────
+
+async function waitForSelector(tabId, selector, maxWait, minLength) {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    const len = await safeExecute(tabId, (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return 0;
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll("script, style, noscript").forEach((s) => s.remove());
+      return clone.textContent.trim().length;
+    }, [selector]);
+    if (len && len > minLength) return false;
+    await delay(500);
+  }
+  return true;
+}
+
+// ─── Wait for Stable Content ─────────────────────────────────
+
+async function waitForStableContent(tabId, maxWait) {
+  const start = Date.now();
+  let lastLength = 0;
+  let stableCount = 0;
+  await delay(2000);
+  while (Date.now() - start < maxWait) {
+    const len = await safeExecute(tabId, () => {
+      const clone = document.body.cloneNode(true);
+      clone.querySelectorAll("script,style,noscript").forEach((el) => el.remove());
+      return clone.textContent.trim().length;
+    });
+    if (len !== null) {
+      if (len === lastLength && len > 0) {
+        stableCount++;
+        if (stableCount >= 2) return;
+      } else stableCount = 0;
+      lastLength = len;
+    }
+    await delay(500);
+  }
+}
+
+// ─── Utility ─────────────────────────────────────────────────
+
+function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
