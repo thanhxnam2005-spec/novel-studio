@@ -5,7 +5,7 @@ import {
   scrapeChapters,
   type ScrapeDebugEntry,
 } from "../scraper/engine";
-import { extensionFetch, checkExtensionStatus } from "../scraper/extension-bridge";
+import { extensionFetch, checkExtensionStatus, extensionDownloadSTVChapter } from "../scraper/extension-bridge";
 import { novelIndexDebugSummary } from "../scraper/novel-page-diagnostics";
 import type {
   ChapterContent,
@@ -13,7 +13,7 @@ import type {
   SiteAdapter,
 } from "../scraper/types";
 
-export type ScraperStep = "url" | "select" | "scraping" | "preview";
+export type ScraperStep = "url" | "select" | "stv-wait" | "scraping" | "preview";
 
 export interface DebugLog {
   timestamp: string;
@@ -46,6 +46,7 @@ interface ScraperState {
   selectAll: () => void;
   deselectAll: () => void;
   startScraping: () => Promise<void>;
+  confirmSTVReady: () => Promise<void>;
   retryScrapeChapter: (index: number) => Promise<void>;
   abortScraping: () => void;
   setStep: (step: ScraperStep) => void;
@@ -202,6 +203,12 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
     );
     if (selectedChapters.length === 0) return;
 
+    // STV: hiện bước chờ user mở chương 1 bằng tay
+    if (adapter.name === "STV") {
+      set({ step: "stv-wait", error: null });
+      return;
+    }
+
     const abortController = new AbortController();
     set({
       step: "scraping",
@@ -248,6 +255,59 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
     }
   },
 
+  // STV: user đã mở chương 1 bằng tay, bắt đầu scrape thật
+  confirmSTVReady: async () => {
+    const { novelInfo, selectedChapterUrls, adapter } = get();
+    if (!novelInfo || !adapter) return;
+
+    const selectedChapters = novelInfo.chapters.filter((ch) =>
+      selectedChapterUrls.has(ch.url),
+    );
+    if (selectedChapters.length === 0) return;
+
+    const abortController = new AbortController();
+    set({
+      step: "scraping",
+      isLoading: true,
+      error: null,
+      scrapedChapters: [],
+      progress: { completed: 0, total: selectedChapters.length, current: "" },
+      abortController,
+    });
+
+    try {
+      await scrapeChapters(
+        selectedChapters,
+        adapter,
+        (completed, total, currentTitle) => {
+          set({ progress: { completed, total, current: currentTitle } });
+        },
+        abortController.signal,
+        (entry) => {
+          const prev = get().scrapedChapters;
+          set({ scrapedChapters: [...prev, entry.parsed] });
+          logChapterIssue(entry);
+        },
+      );
+
+      set({
+        isLoading: false,
+        step: "preview",
+        abortController: null,
+      });
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        set({ isLoading: false, error: "Đã hủy scraping", abortController: null });
+        return;
+      }
+      set({
+        error: err instanceof Error ? err.message : "Lỗi khi scrape",
+        isLoading: false,
+        abortController: null,
+      });
+    }
+  },
+
   retryScrapeChapter: async (index) => {
     const { novelInfo, scrapedChapters, adapter } = get();
     if (!novelInfo || !adapter) return;
@@ -259,11 +319,33 @@ export const useScraperStore = create<ScraperState>((set, get) => ({
 
     set({ retryingIndex: index });
     try {
-      const { html, contentText, timedOut, logs } = await extensionFetch(
-        chapterLink.url,
-        adapter.chapterWaitSelector,
-        adapter.chapterClickSelector,
-      );
+      let html = "";
+      let contentText: string | undefined = undefined;
+      let timedOut = false;
+      let logs: string[] = [];
+
+      if (adapter.name === "STV" && chapterLink.id) {
+        try {
+          const res = await extensionDownloadSTVChapter(chapterLink.id, chapterLink.url);
+          html = res.data ?? "";
+          contentText = (res as any).contentText ?? res.content ?? undefined;
+          timedOut = (res as any).timedOut ?? false;
+        } catch (err: any) {
+          timedOut = true;
+          logs.push(err.message);
+        }
+      } else {
+        const fetchRes = await extensionFetch(
+          chapterLink.url,
+          adapter.chapterWaitSelector,
+          adapter.chapterClickSelector,
+        );
+        html = fetchRes.html;
+        contentText = fetchRes.contentText;
+        timedOut = fetchRes.timedOut ?? false;
+        logs = fetchRes.logs ?? [];
+      }
+
       const content = sanitizeChapterContent(
         adapter.getChapterContent(html, chapterLink.url, contentText),
       );

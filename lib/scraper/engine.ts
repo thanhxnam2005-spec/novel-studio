@@ -1,5 +1,5 @@
 import { sanitizeText } from "../utils";
-import { extensionFetch } from "./extension-bridge";
+import { extensionFetch, extensionDownloadSTVChapter } from "./extension-bridge";
 import type { ChapterContent, ChapterLink, SiteAdapter } from "./types";
 
 export function sanitizeChapterContent(c: ChapterContent): ChapterContent {
@@ -40,11 +40,32 @@ export async function scrapeChapters(
     const chapter = chapters[i];
     onProgress?.(i, chapters.length, chapter.title);
 
-    const { html, contentText, timedOut, logs } = await extensionFetch(
-      chapter.url,
-      adapter.chapterWaitSelector,
-      adapter.chapterClickSelector,
-    );
+    let html = "";
+    let contentText: string | undefined = undefined;
+    let timedOut = false;
+    let logs: string[] = [];
+
+    if (adapter.name === "STV" && chapter.id) {
+      try {
+        const res = await extensionDownloadSTVChapter(chapter.id, chapter.url);
+        html = res.data ?? "";
+        contentText = (res as any).contentText ?? res.content ?? undefined;
+        timedOut = (res as any).timedOut ?? false;
+      } catch (err: any) {
+        timedOut = true; // Mark as issue if it fails
+        logs.push(err.message);
+      }
+    } else {
+      const fetchRes = await extensionFetch(
+        chapter.url,
+        adapter.chapterWaitSelector,
+        adapter.chapterClickSelector,
+      );
+      html = fetchRes.html;
+      contentText = fetchRes.contentText;
+      timedOut = fetchRes.timedOut ?? false;
+      logs = fetchRes.logs ?? [];
+    }
     const content = sanitizeChapterContent(
       adapter.getChapterContent(html, chapter.url, contentText),
     );

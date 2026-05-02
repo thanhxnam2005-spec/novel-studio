@@ -1,19 +1,32 @@
 {
   "manifest_version": 3,
   "name": "Novel Studio Connector (PC)",
-  "version": "0.3.0",
-  "description": "Fetch novel content from external websites for Novel Studio. Optimized for Windows/Mac (uses minimized windows).",
-  "permissions": ["tabs", "scripting"],
-  "host_permissions": ["<all_urls>"],
-  "externally_connectable": {
-    "matches": [
-      "http://localhost:*/*",
-      "https://localhost:*/*",
-      "https://thuyetthucac.vercel.app/*"
-    ]
-  },
+  "version": "4.0",
+  "description": "Auto-extract chapters while user reads",
   "background": {
     "service_worker": "background.js"
   },
-  "icons": {}
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://sangtacviet.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "*://thuyetthucac.vercel.app/*",
+      "http://localhost:*/*",
+      "https://localhost:*/*"
+    ]
+  }
 }

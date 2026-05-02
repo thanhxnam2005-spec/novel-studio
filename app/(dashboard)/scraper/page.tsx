@@ -53,6 +53,7 @@ import {
   DownloadIcon,
   EyeIcon,
   GlobeIcon,
+  HandIcon,
   LibraryIcon,
   Link2Icon,
   ListChecksIcon,
@@ -105,6 +106,7 @@ function isVersionOutdated(current: string | null, required: string): boolean {
 const STEPS: { key: ScraperStep; label: string; icon: React.ElementType }[] = [
   { key: "url", label: "URL", icon: GlobeIcon },
   { key: "select", label: "Chọn chương", icon: ListChecksIcon },
+  { key: "stv-wait", label: "Chuẩn bị", icon: HandIcon },
   { key: "scraping", label: "Scraping", icon: LoaderIcon },
   { key: "preview", label: "Xem trước", icon: EyeIcon },
 ];
@@ -422,6 +424,7 @@ export default function ScraperPage() {
 
           {store.step === "url" && <UrlStep />}
           {store.step === "select" && <SelectStep />}
+          {store.step === "stv-wait" && <STVWaitStep />}
           {store.step === "scraping" && <ScrapingStep />}
           {store.step === "preview" && <PreviewStep router={router} />}
         </div>
@@ -517,7 +520,7 @@ function UrlStep() {
                   </span>
                 </div>
                 <a
-                  href="/novel-studio-connector.zip"
+                  href="/novel-studio-connector-pc.zip?v=2.7.1"
                   download
                   className="shrink-0 rounded-md bg-amber-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-amber-700"
                 >
@@ -591,7 +594,7 @@ function UrlStep() {
                     className="h-7 text-xs"
                     asChild
                   >
-                    <a href="/novel-studio-connector-pc.zip" download>
+                    <a href="/novel-studio-connector-pc.zip?v=2.7.1" download>
                       <DownloadIcon className="mr-1.5 size-3" />
                       Tải bản PC
                     </a>
@@ -602,7 +605,7 @@ function UrlStep() {
                     className="h-7 text-xs"
                     asChild
                   >
-                    <a href="/novel-studio-connector-android.zip" download>
+                    <a href="/novel-studio-connector-android.zip?v=2.7.1" download>
                       <DownloadIcon className="mr-1.5 size-3" />
                       Tải bản Android
                     </a>
@@ -804,6 +807,92 @@ function SelectStep() {
             disabled={selectedChapterUrls.size === 0}
           >
             Scrape {selectedChapterUrls.size} chương
+            <ArrowRightIcon className="ml-1 size-3.5" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Step 2.5: STV Wait ─────────────────────────────────────
+
+function STVWaitStep() {
+  const { novelInfo, selectedChapterUrls, confirmSTVReady, setStep } = useScraperStore();
+  if (!novelInfo) return null;
+
+  const firstChapter = novelInfo.chapters.find((ch) => selectedChapterUrls.has(ch.url));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <HandIcon className="size-5 text-amber-500" />
+          Chuẩn bị tải chương
+        </CardTitle>
+        <CardDescription>
+          SangTacViet yêu cầu thao tác bằng tay để tải nội dung.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">1</div>
+              <div>
+                <p className="font-medium text-sm">Mở tab SangTacViet</p>
+                <p className="text-xs text-muted-foreground">
+                  Chuyển qua trình duyệt và mở trang SangTacViet
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">2</div>
+              <div>
+                <p className="font-medium text-sm">Nhấp vào chương đầu tiên</p>
+                <p className="text-xs text-muted-foreground">
+                  Bấm vào {firstChapter ? `"${firstChapter.title}"` : "chương đầu tiên bạn muốn tải"} để nội dung hiện ra
+                </p>
+                {firstChapter && (
+                  <a
+                    href={firstChapter.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <Link2Icon className="size-3" />
+                    Mở chương đầu tiên
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">3</div>
+              <div>
+                <p className="font-medium text-sm">Chờ nội dung load xong</p>
+                <p className="text-xs text-muted-foreground">
+                  Đảm bảo nội dung chương đã hiện đầy đủ trên trang
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-xs font-bold text-white">4</div>
+              <div>
+                <p className="font-medium text-sm">Quay lại đây và bấm Tiếp tục</p>
+                <p className="text-xs text-muted-foreground">
+                  Hệ thống sẽ tự động tải các chương tiếp theo
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between">
+          <Button variant="ghost" size="sm" onClick={() => setStep("select")}>
+            Quay lại
+          </Button>
+          <Button onClick={confirmSTVReady}>
+            Tôi đã mở chương — Tiếp tục
             <ArrowRightIcon className="ml-1 size-3.5" />
           </Button>
         </div>

@@ -1,192 +1,225 @@
-// Novel Studio Connector — Background Service Worker (PC Version)
-// Optimized for Desktop Chrome using minimized windows.
+// Novel Studio Connector v4.1 — Clean Handshake
+// Flow: App gọi → Extension trả content → App gọi tiếp → Extension chuyển chương + trả
+console.log("%c🚀 Novel Studio Connector v4.1", "color:lime;font-size:16px");
 
+const contentCache = new Map();
+
+// Content.js gửi nội dung → cache
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "STV_CONTENT_READY" && sender.tab) {
+    console.log(`[BG] ✅ Cache: ${msg.length} chars — ${msg.url}`);
+    contentCache.set(sender.tab.id, {
+      content: msg.content, title: msg.title,
+      url: msg.url, length: msg.length, timestamp: Date.now()
+    });
+  }
+  if (msg.type === "STV_PAGE_LOADED" && sender.tab) {
+    console.log(`[BG] Page loaded: ${msg.url}`);
+  }
+});
+
+// ====================== WEB APP MESSAGES ======================
 chrome.runtime.onMessageExternal.addListener((request, _sender, sendResponse) => {
-  if (request.type === "PING") {
-    sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
+  if (request.type === "PING" || request.action === "ping") {
+    sendResponse({ ok: true, version: chrome.runtime.getManifest().version, success: true, status: "online" });
     return false;
   }
-
+  if (request.action === "downloadChapter") {
+    stvFetchChapter(request.payload, sendResponse);
+    return true;
+  }
+  if (request.action === "downloadAllSequential") {
+    downloadAllSequential(request.payload, sendResponse);
+    return true;
+  }
   if (request.type === "FETCH") {
     handleFetch(request.url, request.waitSelector, request.clickSelector, request.timeout || 15000)
-      .then((result) => sendResponse({ ok: true, ...result }))
-      .catch((err) => sendResponse({ ok: false, error: err.message }));
-    return true; 
+      .then((r) => sendResponse({ ok: true, ...r }))
+      .catch((e) => sendResponse({ ok: false, error: e.message }));
+    return true;
   }
   return false;
 });
 
-async function handleFetch(url, waitSelector, clickSelector, timeout) {
-  const logs = [];
-  const log = (msg) => logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+// ====================== STV CHAPTER FETCH ======================
+// Handshake: App gọi → lấy content hiện tại → chuyển chương → respond
+// Lần gọi tiếp: cache đã có chương mới → lấy → chuyển → respond
 
-  // PC: create minimized window
-  const win = await chrome.windows.create({ url, state: "minimized" });
-  const tabId = win.tabs[0].id;
-  const windowId = win.id;
-  log(`tab created (minimized window)`);
+async function findSTVTab() {
+  const tabs = await chrome.tabs.query({ url: "*://sangtacviet.com/*" });
+  return tabs.length > 0 ? tabs[0].id : null;
+}
 
+async function stvFetchChapter(payload, sendResponse) {
   try {
-    await waitForTabLoad(tabId, 30000);
-    log(`page loaded`);
-
-    // Anti-bot delay
-    const initialDelay = 1000 + Math.random() * 1500;
-    await delay(initialDelay);
-    log(`waited ${Math.round(initialDelay)}ms (anti-bot)`);
-
-    // Anti-bot interaction
-    await injectHumanBehavior(tabId);
-    log(`injected human behavior`);
-
-    let timedOut = false;
-    if (clickSelector && waitSelector) {
-      timedOut = await clickAndWait(tabId, clickSelector, waitSelector, timeout, log);
-    } else if (clickSelector) {
-      await robustClick(tabId, clickSelector);
-      log(`clicked: ${clickSelector}`);
-    } else if (waitSelector) {
-      timedOut = await waitForSelector(tabId, waitSelector, timeout, 200);
-      log(timedOut ? `wait timeout: ${waitSelector}` : `content ready: ${waitSelector}`);
-    } else {
-      await waitForStableContent(tabId, timeout);
-      log(`content stabilized`);
+    const tabId = await findSTVTab();
+    if (!tabId) {
+      sendResponse({ success: false, error: "Mở 1 tab SangTacViet trước!" });
+      return;
     }
 
+    // 1. Lấy content từ cache (content.js đã auto-extract khi page load)
+    let content = '', title = '';
+
+    // Đợi cache (tối đa 20s)
+    for (let i = 0; i < 40; i++) {
+      const cached = contentCache.get(tabId);
+      if (cached && cached.length > 200) {
+        content = cached.content;
+        title = cached.title;
+        contentCache.delete(tabId);
+        break;
+      }
+      // Sau 3s không có cache, thử hỏi trực tiếp
+      if (i === 6) {
+        try {
+          const resp = await chrome.tabs.sendMessage(tabId, { type: "EXTRACT_NOW" });
+          if (resp && resp.length > 200) {
+            content = resp.content;
+            title = resp.title;
+            break;
+          }
+        } catch {}
+      }
+      await delay(500);
+    }
+
+    console.log(`[STV] Got ${content.length} chars for current page`);
+
+    // 2. Click "Chương sau" → chuẩn bị cho lần gọi tiếp
+    contentCache.delete(tabId);
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: "GO_NEXT" });
+      // Đợi trang mới load + content.js extract
+      await waitForTabLoad(tabId, 25000);
+      // Đợi cache được fill bởi content.js
+      for (let i = 0; i < 30; i++) {
+        if (contentCache.has(tabId)) {
+          console.log("[STV] ✅ Next page cached!");
+          break;
+        }
+        await delay(500);
+      }
+    } catch (e) {
+      console.log("[STV] GO_NEXT:", e.message || "no next chapter");
+    }
+
+    // 3. Trả kết quả
+    sendResponse({
+      success: true, content, contentText: content,
+      data: '', length: content.length,
+      title, timedOut: content.length < 200
+    });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function downloadAllSequential({ chapters, delay: d = 1000 }, sendResponse) {
+  const results = [];
+  for (let i = 0; i < chapters.length; i++) {
+    const ch = chapters[i];
+    console.log(`[${i+1}/${chapters.length}] ${ch.title}`);
+    const res = await new Promise(r => stvFetchChapter({ chapterUrl: ch.url }, r));
+    results.push({ chapter: ch, ...res });
+  }
+  sendResponse({ success: true, results });
+}
+
+// ====================== STANDARD FETCH (non-STV) ======================
+async function handleFetch(url, waitSelector, clickSelector, timeout) {
+  const tab = await chrome.tabs.create({ url, active: false });
+  const tabId = tab.id;
+  try {
+    await waitForTabLoad(tabId, 30000);
+    await injectStealth(tabId);
+    await delay(1000 + Math.random() * 1500);
+    let timedOut = false;
+    if (clickSelector && waitSelector) {
+      for (let i = 0; i < 3; i++) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId }, args: [clickSelector], func: (s) => {
+            const el = document.querySelector(s); if (el) el.click();
+          }});
+        } catch {}
+        if (!(await waitForSelector(tabId, waitSelector, Math.floor(timeout/3), 200))) { timedOut = false; break; }
+        timedOut = true; await delay(500);
+      }
+    } else if (waitSelector) {
+      timedOut = await waitForSelector(tabId, waitSelector, timeout, 200);
+    } else {
+      await waitForStableContent(tabId, timeout);
+    }
     const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      args: [waitSelector || null],
-      func: (sel) => {
+      target: { tabId }, args: [waitSelector || null],
+      func: (s) => {
         const html = "<!DOCTYPE html><html>" + document.head.outerHTML + "<body>" + document.body.innerHTML + "</body></html>";
         let contentText = null;
-        if (sel) {
-          const el = document.querySelector(sel);
-          if (el) contentText = el.innerText;
-        }
+        if (s) { const el = document.querySelector(s); if (el) contentText = el.innerText; }
         return { html, contentText };
       },
     });
-
     const data = results?.[0]?.result;
-    if (!data) throw new Error("Failed to extract page content");
-
-    return { html: data.html, contentText: data.contentText, timedOut, logs };
-  } catch (err) {
-    throw Object.assign(err, { logs });
-  } finally {
-    try { await chrome.windows.remove(windowId); } catch {}
-  }
+    if (!data) throw new Error("Failed to extract");
+    return { html: data.html, contentText: data.contentText, timedOut };
+  } finally { try { await chrome.tabs.remove(tabId); } catch {} }
 }
 
-async function injectHumanBehavior(tabId) {
+// ====================== HELPERS ======================
+async function injectStealth(tabId) {
   try {
     await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId }, world: "MAIN",
       func: () => {
-        window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
-        document.dispatchEvent(new MouseEvent("mousemove", {
-          clientX: Math.floor(Math.random() * window.innerWidth),
-          clientY: Math.floor(Math.random() * window.innerHeight),
-          bubbles: true,
-        }));
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+        Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+        Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+        Document.prototype.hasFocus = () => true;
+        document.addEventListener('visibilitychange', e => e.stopImmediatePropagation(), true);
       },
     });
   } catch {}
-  await delay(300 + Math.random() * 500);
 }
-
-async function clickAndWait(tabId, clickSel, waitSel, timeout, log) {
-  const maxRetries = 3;
-  const perAttemptTimeout = Math.floor(timeout / maxRetries);
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    await robustClick(tabId, clickSel);
-    if (!(await waitForSelector(tabId, waitSel, perAttemptTimeout, 200))) return false;
-    await delay(500 + Math.random() * 1000);
-  }
-  return true;
-}
-
-async function robustClick(tabId, selector) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      args: [selector],
-      func: (sel) => {
-        const el = document.querySelector(sel);
-        if (!el) return;
-        el.click();
-        const opts = { bubbles: true, cancelable: true, view: window };
-        el.dispatchEvent(new MouseEvent("mousedown", opts));
-        el.dispatchEvent(new MouseEvent("mouseup", opts));
-        el.dispatchEvent(new MouseEvent("click", opts));
-      },
-    });
-  } catch {}
-  await delay(500);
-}
-
-async function waitForSelector(tabId, selector, maxWait, minLength) {
+async function waitForSelector(tabId, sel, maxWait, minLen) {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
     try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        args: [selector],
-        func: (sel) => {
-          const el = document.querySelector(sel);
-          if (!el) return 0;
-          const clone = el.cloneNode(true);
-          clone.querySelectorAll("script, style, noscript").forEach((s) => s.remove());
-          return clone.textContent.trim().length;
-        },
-      });
-      if ((results?.[0]?.result ?? 0) > minLength) return false;
+      const r = await chrome.scripting.executeScript({ target: { tabId }, args: [sel], func: (s) => {
+        const el = document.querySelector(s); if (!el) return 0;
+        const c = el.cloneNode(true); c.querySelectorAll("script,style,noscript").forEach(x => x.remove());
+        return c.textContent.trim().length;
+      }});
+      if ((r?.[0]?.result ?? 0) > minLen) return false;
     } catch {}
     await delay(500);
   }
   return true;
 }
-
 async function waitForStableContent(tabId, maxWait) {
-  const start = Date.now();
-  let lastLength = 0, stableCount = 0;
+  const start = Date.now(); let last = 0, stable = 0;
   await delay(1500);
   while (Date.now() - start < maxWait) {
     try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          const clone = document.body.cloneNode(true);
-          clone.querySelectorAll("script,style,noscript").forEach((el) => el.remove());
-          return clone.textContent.trim().length;
-        },
-      });
-      const len = results?.[0]?.result ?? 0;
-      if (len === lastLength && len > 0) {
-        stableCount++;
-        if (stableCount >= 2) return;
-      } else stableCount = 0;
-      lastLength = len;
+      const r = await chrome.scripting.executeScript({ target: { tabId }, func: () => {
+        const c = document.body.cloneNode(true); c.querySelectorAll("script,style,noscript").forEach(e => e.remove());
+        return c.textContent.trim().length;
+      }});
+      const len = r?.[0]?.result ?? 0;
+      if (len === last && len > 0) { stable++; if (stable >= 2) return; } else stable = 0;
+      last = len;
     } catch {}
     await delay(500);
   }
 }
-
-function waitForTabLoad(tabId, timeoutMs) {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-      resolve();
-    }, timeoutMs);
-    function listener(id, info) {
-      if (id === tabId && info.status === "complete") {
-        chrome.tabs.onUpdated.removeListener(listener);
-        clearTimeout(timeout);
-        resolve();
-      }
+function waitForTabLoad(tabId, ms) {
+  return new Promise(resolve => {
+    const t = setTimeout(() => { chrome.tabs.onUpdated.removeListener(fn); resolve(); }, ms);
+    function fn(id, info) {
+      if (id === tabId && info.status === "complete") { chrome.tabs.onUpdated.removeListener(fn); clearTimeout(t); resolve(); }
     }
-    chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.onUpdated.addListener(fn);
   });
 }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
+chrome.tabs.onRemoved.addListener((tabId) => { contentCache.delete(tabId); });

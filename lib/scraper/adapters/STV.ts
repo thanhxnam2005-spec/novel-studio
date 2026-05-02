@@ -56,6 +56,7 @@ export const STVAdapter: SiteAdapter = {
       title: el.textContent?.trim() ?? `Chương ${i + 1}`,
       url: `${baseUrl}${i + 1}/`,
       order: i,
+      id: bookinfo?.id,
     }));
 
     return { title, author, description, coverImage, chapters };

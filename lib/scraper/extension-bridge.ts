@@ -110,6 +110,20 @@ export async function extensionFetch(
   };
 }
 
+export async function extensionDownloadSTVChapter(
+  chapterId: string | number,
+  chapterUrl: string,
+): Promise<{ success: boolean; rawHtml?: string; content?: string; data?: string; json?: any; error?: string }> {
+  const response: any = await sendMessage({
+    action: "downloadChapter",
+    payload: { chapterId, chapterUrl },
+  });
+  if (!response.success) {
+    throw new Error(response.error ?? "SangTacViet download failed");
+  }
+  return response;
+}
+
 /**
  * Check if the extension is installed and responsive.
  * Returns the version string if available, or null if not connected.

@@ -29,6 +29,7 @@ export interface ChapterLink {
   title: string;
   url: string;
   order: number;
+  id?: string | number;
 }
 
 export interface ChapterContent {
