@@ -28,8 +28,8 @@ export const PiaotiaAdapter: SiteAdapter = {
     const coverImg = doc.querySelector("img[src*='/bookimage/']");
     const coverImage = coverImg ? new URL(coverImg.getAttribute("src") || "", base).href : undefined;
 
-    // Chapters are in <div class="centent"> -> <table> -> <td> -> <a>
-    const chapterLinks = doc.querySelectorAll(".centent table td a");
+    // Chapters are usually in <div class="centent"> -> <ul><li><a> or <table><td><a>
+    const chapterLinks = doc.querySelectorAll(".centent a[href$='.html']");
     const chapters = Array.from(chapterLinks).map((a, i) => ({
       title: a.textContent?.trim() || `Chương ${i + 1}`,
       url: new URL(a.getAttribute("href") || "", base).href,

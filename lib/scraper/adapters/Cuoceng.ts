@@ -16,8 +16,8 @@ export const CuocengAdapter: SiteAdapter = {
     const coverImg = doc.querySelector("a.book_cover img");
     const coverImage = coverImg ? new URL(coverImg.getAttribute("src") || "", base).href : undefined;
 
-    // Chapters are in <div class="dirList"> -> <a>
-    const chapterLinks = doc.querySelectorAll(".dirList a[href*='/book/']");
+    // Chapters are usually in <div class="dirList"> -> <a> or similar
+    const chapterLinks = doc.querySelectorAll(".dirList a[href*='/book/'], .chapterlist a[href*='/book/'], .index_area a[href*='/book/']");
     const chapters = Array.from(chapterLinks).map((a, i) => {
       // Sometimes title is in a span inside a
       const chTitle = a.querySelector("span")?.textContent?.trim() || a.textContent?.trim() || `Chương ${i + 1}`;
