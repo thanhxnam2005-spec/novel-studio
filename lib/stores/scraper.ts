@@ -12,6 +12,7 @@ import { db } from "../db";
 import { stripHtml, countWords } from "../utils";
 import type {
   ChapterContent,
+  ChapterLink,
   NovelInfo,
   SiteAdapter,
 } from "../scraper/types";
@@ -182,7 +183,7 @@ export const useScraperStore = create<ScraperState>()(
           }
 
           const selectedChapterUrls = new Set(
-            novelInfo.chapters.map((ch) => ch.url),
+            novelInfo.chapters.map((ch: ChapterLink) => ch.url),
           );
 
           set({
@@ -210,7 +211,7 @@ export const useScraperStore = create<ScraperState>()(
 
       selectAll: () => {
         const chapters = get().novelInfo?.chapters ?? [];
-        set({ selectedChapterUrls: new Set(chapters.map((ch) => ch.url)) });
+        set({ selectedChapterUrls: new Set(chapters.map((ch: ChapterLink) => ch.url)) });
       },
 
       deselectAll: () => {
@@ -227,7 +228,7 @@ export const useScraperStore = create<ScraperState>()(
         }
         if (!adapter) return;
 
-        const selectedChapters = novelInfo.chapters.filter((ch) =>
+        const selectedChapters = novelInfo.chapters.filter((ch: ChapterLink) =>
           selectedChapterUrls.has(ch.url),
         );
         if (selectedChapters.length === 0) return;
@@ -293,7 +294,7 @@ export const useScraperStore = create<ScraperState>()(
         }
         if (!adapter) return;
 
-        const selectedChapters = novelInfo.chapters.filter((ch) =>
+        const selectedChapters = novelInfo.chapters.filter((ch: ChapterLink) =>
           selectedChapterUrls.has(ch.url),
         );
         if (selectedChapters.length === 0) return;
@@ -415,7 +416,7 @@ export const useScraperStore = create<ScraperState>()(
         }
         if (!adapter) return;
 
-        const selectedChapters = novelInfo.chapters.filter((ch) =>
+        const selectedChapters = novelInfo.chapters.filter((ch: ChapterLink) =>
           selectedChapterUrls.has(ch.url),
         );
         if (selectedChapters.length === 0) return;
@@ -476,7 +477,7 @@ export const useScraperStore = create<ScraperState>()(
         if (!adapter) return;
 
         const selectedUrls = get().selectedChapterUrls;
-        const selectedChapters = novelInfo.chapters.filter((ch) => selectedUrls.has(ch.url));
+        const selectedChapters = novelInfo.chapters.filter((ch: ChapterLink) => selectedUrls.has(ch.url));
         const chapterLink = selectedChapters[index];
         if (!chapterLink) return;
 
