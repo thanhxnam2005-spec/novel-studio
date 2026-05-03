@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -53,6 +54,7 @@ import {
   loadDictFromPublic,
   useDictMeta,
 } from "@/lib/hooks/use-dict-entries";
+import { cn } from "@/lib/utils";
 import {
   bulkImportNameEntries,
   createNameEntry,
@@ -73,6 +75,7 @@ import {
   SearchIcon,
   Trash2Icon,
 } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -123,13 +126,14 @@ const DICT_SOURCE_DESC: Record<DictSource, string> = {
   luatnhan: "Luật nhân xưng {0}",
 };
 
-export function DictionaryManagement() {
+export function DictionaryManagement({ compact }: { compact?: boolean }) {
   const dictMeta = useDictMeta();
   const globalEntries = useGlobalNameEntries();
   const [isReloading, setIsReloading] = useState(false);
   const [replacingSource, setReplacingSource] = useState<DictSource | null>(
     null,
   );
+  const [activeTab, setActiveTab] = useState<"list" | "lookup">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -149,16 +153,22 @@ export function DictionaryManagement() {
   const [importSourceLabel, setImportSourceLabel] = useState("");
   const nameFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [scopeFilter, setScopeFilter] = useState<"all" | "global" | "local">("all");
+
   // Filter entries
-  const filteredEntries = (globalEntries ?? []).filter((e) => {
-    const matchesSearch =
-      !searchQuery ||
-      e.chinese.includes(searchQuery) ||
-      e.vietnamese.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || e.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredEntries = (globalEntries ?? [])
+    .filter((e) => {
+      const matchesSearch =
+        !searchQuery ||
+        e.chinese.includes(searchQuery) ||
+        e.vietnamese.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        categoryFilter === "all" || e.category === categoryFilter;
+      const matchesScope = 
+        scopeFilter === "all" || e.scope === scopeFilter;
+      return matchesSearch && matchesCategory && matchesScope;
+    })
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // Mới nhất lên đầu
 
   const handleReloadDicts = async () => {
     setIsReloading(true);
@@ -331,14 +341,292 @@ export function DictionaryManagement() {
     setNewCategory(entry.category);
   };
 
+  // System Lookup logic
+  const [lookupQuery, setLookupQuery] = useState("");
+  const systemResults = useLiveQuery(async () => {
+    if (!lookupQuery || lookupQuery.length < 1) return [];
+    return db.dictEntries
+      .where("chinese")
+      .startsWith(lookupQuery)
+      .limit(50)
+      .toArray();
+  }, [lookupQuery]);
+
+  // Suggestions for currently editing/adding word
+  const currentChinese = editingEntry ? newChinese : newChinese; // simplified
+  const systemSuggestions = useLiveQuery(async () => {
+    if (!newChinese) return [];
+    return db.dictEntries
+      .where("chinese")
+      .equals(newChinese)
+      .toArray();
+  }, [newChinese]);
+
   // Paginate
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = compact ? 20 : 10;
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(filteredEntries.length / PAGE_SIZE);
   const pagedEntries = filteredEntries.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
   );
+
+  if (compact) {
+    return (
+      <div className="space-y-4">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b pb-1 mb-2">
+           <button 
+             onClick={() => setActiveTab("list")}
+             className={cn(
+               "px-3 py-1 text-[10px] font-bold uppercase transition-colors rounded-t-md",
+               activeTab === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+             )}
+           >
+             Của tôi
+           </button>
+           <button 
+             onClick={() => setActiveTab("lookup")}
+             className={cn(
+               "px-3 py-1 text-[10px] font-bold uppercase transition-colors rounded-t-md",
+               activeTab === "lookup" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+             )}
+           >
+             Tra hệ thống
+           </button>
+        </div>
+
+        {activeTab === "list" ? (
+          <>
+            {/* Search & filter tags */}
+            <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <SearchIcon className="text-muted-foreground absolute top-2.5 left-2.5 size-3.5" />
+                    <Input
+                      placeholder="Tìm trong từ điển của bạn..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPage(0);
+                      }}
+                      className="pl-8 h-9 text-xs"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-9 px-3"
+                    onClick={() => {
+                      setNewChinese("");
+                      setNewVietnamese("");
+                      setNewCategory("nhân vật");
+                      setAddDialogOpen(true);
+                    }}
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
+                </div>
+
+                {/* Filter Tags */}
+                <div className="space-y-3 rounded-md border bg-muted/20 p-2.5">
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Phạm vi</p>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { id: "all", label: "Tất cả" },
+                        { id: "local", label: "Riêng" },
+                        { id: "global", label: "Chung" },
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setScopeFilter(s.id as any)}
+                          className={cn(
+                            "rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors border",
+                            scopeFilter === s.id
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background hover:bg-muted border-border"
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Loại</p>
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        onClick={() => setCategoryFilter("all")}
+                        className={cn(
+                          "rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors border",
+                          categoryFilter === "all"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background hover:bg-muted border-border"
+                        )}
+                      >
+                        Tất cả
+                      </button>
+                      {NAME_ENTRY_CATEGORIES.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setCategoryFilter(cat)}
+                          className={cn(
+                            "rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors border capitalize",
+                            categoryFilter === cat
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background hover:bg-muted border-border"
+                          )}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+            </div>
+
+            {/* Compact List */}
+            <div className="space-y-1 max-h-[400px] overflow-y-auto">
+              {pagedEntries.map((entry) => (
+                <div key={entry.id} className="group flex items-center justify-between rounded-md border border-border/50 p-2 hover:bg-muted/30">
+                   <div className="min-w-0 flex-1">
+                     <div className="flex items-center gap-1.5">
+                       <span className="font-mono text-xs font-bold text-primary">{entry.chinese}</span>
+                       <span className="text-[10px] text-muted-foreground">→</span>
+                       <span className="text-xs font-medium">{entry.vietnamese}</span>
+                     </div>
+                     <div className="mt-0.5">
+                       <Badge variant="outline" className="h-4 px-1 text-[8px] uppercase tracking-tighter opacity-60">
+                         {entry.category}
+                       </Badge>
+                     </div>
+                   </div>
+                   <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button variant="ghost" size="icon-xs" onClick={() => openEditDialog(entry)}>
+                        <Edit3 className="size-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon-xs" className="text-destructive" onClick={() => handleDeleteEntry(entry.id)}>
+                        <Trash2Icon className="size-3" />
+                      </Button>
+                   </div>
+                </div>
+              ))}
+              
+              {filteredEntries.length === 0 && (
+                 <p className="py-8 text-center text-[10px] text-muted-foreground italic">Không tìm thấy kết quả</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+             <div className="relative">
+                <SearchIcon className="text-muted-foreground absolute top-2.5 left-2.5 size-3.5" />
+                <Input
+                  placeholder="Tra cứu từ điển hệ thống (Vietphrase/Hán Việt)..."
+                  value={lookupQuery}
+                  onChange={(e) => setLookupQuery(e.target.value)}
+                  className="pl-8 h-9 text-xs"
+                />
+             </div>
+             <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
+                {systemResults?.map((res, i) => (
+                   <div key={i} className="flex flex-col rounded-md border p-2 bg-muted/10">
+                      <div className="flex items-center justify-between">
+                         <span className="font-mono text-xs font-bold">{res.chinese}</span>
+                         <Badge variant="secondary" className="text-[8px] h-4">{res.source}</Badge>
+                      </div>
+                      <p className="text-xs mt-1 text-primary">{res.vietnamese}</p>
+                      <Button 
+                        variant="ghost" 
+                        size="xs" 
+                        className="mt-2 h-6 text-[9px] uppercase font-bold self-end"
+                        onClick={() => {
+                           setNewChinese(res.chinese);
+                           setNewVietnamese(res.vietnamese.split("/")[0]);
+                           setAddDialogOpen(true);
+                           setActiveTab("list");
+                        }}
+                      >
+                         Dùng nghĩa này
+                      </Button>
+                   </div>
+                ))}
+                {lookupQuery && systemResults?.length === 0 && (
+                   <p className="text-center py-10 text-[10px] text-muted-foreground">Không tìm thấy từ này trong hệ thống</p>
+                )}
+             </div>
+          </div>
+        )}
+
+        {/* Dialogs */}
+        <Dialog
+          open={addDialogOpen || !!editingEntry}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAddDialogOpen(false);
+              setEditingEntry(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-xs">
+            <DialogHeader>
+              <DialogTitle className="text-sm">
+                {editingEntry ? "Sửa từ điển" : "Thêm từ mới"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-[10px]">Trung văn</Label>
+                <Input value={newChinese} onChange={(e) => setNewChinese(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Tiếng Việt</Label>
+                <Input value={newVietnamese} onChange={(e) => setNewVietnamese(e.target.value)} className="h-8 text-xs" />
+              </div>
+              
+              {/* Gợi ý hệ thống */}
+              {systemSuggestions && systemSuggestions.length > 0 && (
+                 <div className="space-y-1">
+                    <Label className="text-[9px] text-muted-foreground">Gợi ý từ hệ thống:</Label>
+                    <div className="flex flex-wrap gap-1">
+                       {systemSuggestions.map((s, i) => (
+                          <button 
+                            key={i} 
+                            onClick={() => setNewVietnamese(s.vietnamese.split("/")[0])}
+                            className="px-1.5 py-0.5 rounded border text-[9px] bg-muted/50 hover:bg-primary/10 transition-colors"
+                          >
+                             {s.vietnamese}
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+              )}
+
+              <div className="space-y-1">
+                <Label className="text-[10px]">Loại</Label>
+                <Select value={newCategory} onValueChange={setNewCategory}>
+                  <SelectTrigger className="h-8 text-xs capitalize">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NAME_ENTRY_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat} className="text-xs capitalize">{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button size="sm" onClick={editingEntry ? handleUpdateEntry : handleAddEntry}>Lưu</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-4">
@@ -511,48 +799,90 @@ export function DictionaryManagement() {
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Search & filter */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <SearchIcon className="text-muted-foreground absolute top-2.5 left-2.5 size-3.5" />
-              <Input
-                placeholder="Tìm kiếm..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(0);
-                }}
-                className="pl-8"
-              />
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <SearchIcon className="text-muted-foreground absolute top-2.5 left-2.5 size-3.5" />
+                <Input
+                  placeholder="Tìm kiếm..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(0);
+                  }}
+                  className="pl-8 h-9"
+                />
+              </div>
+              {(globalEntries ?? []).length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handleClearGlobalNames}
+                  title="Xóa tất cả"
+                  className="h-9 w-9"
+                >
+                  <Trash2Icon className="size-4" />
+                </Button>
+              )}
             </div>
-            <Select
-              value={categoryFilter}
-              onValueChange={(v) => {
-                setCategoryFilter(v);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Tất cả" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {NAME_ENTRY_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(globalEntries ?? []).length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleClearGlobalNames}
-                title="Xóa tất cả"
-              >
-                <Trash2Icon className="size-3.5" />
-              </Button>
-            )}
+
+            {/* Filter Tags as requested in screenshot */}
+            <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Phạm vi</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: "all", label: "Tất cả" },
+                    { id: "local", label: "Riêng" },
+                    { id: "global", label: "Chung" },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setScopeFilter(s.id as any)}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors border",
+                        scopeFilter === s.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border"
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Loại</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setCategoryFilter("all")}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors border",
+                      categoryFilter === "all"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-border"
+                    )}
+                  >
+                    Tất cả
+                  </button>
+                  {NAME_ENTRY_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoryFilter(cat)}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors border capitalize",
+                        categoryFilter === cat
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Table */}

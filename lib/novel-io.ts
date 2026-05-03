@@ -10,6 +10,7 @@ import {
   type ExcludedName,
   type SceneVersionType,
 } from "@/lib/db";
+import JSZip from "jszip";
 
 // ─── Export Format ──────────────────────────────────────────
 
@@ -76,6 +77,40 @@ export function downloadNovelJson(data: NovelExportData) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `${data.novel.title.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF ]/g, "_")}.novel.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadNovelChaptersZip(novelId: string) {
+  const novel = await db.novels.get(novelId);
+  if (!novel) throw new Error("Novel not found");
+
+  const [chapters, scenes] = await Promise.all([
+    db.chapters.where("novelId").equals(novelId).sortBy("order"),
+    db.scenes.where("[novelId+isActive]").equals([novelId, 1]).toArray(),
+  ]);
+
+  const zip = new JSZip();
+  const folder = zip.folder(novel.title.replace(/[/\\?%*:|"<>]/g, "_"));
+
+  if (!folder) throw new Error("Could not create folder in ZIP");
+
+  for (let i = 0; i < chapters.length; i++) {
+    const chapter = chapters[i];
+    const chapterScenes = scenes
+      .filter((s) => s.chapterId === chapter.id)
+      .sort((a, b) => a.order - b.order);
+
+    const content = chapterScenes.map((s) => s.content).join("\n\n");
+    const fileName = `${(i + 1).toString().padStart(4, "0")} - ${chapter.title.replace(/[/\\?%*:|"<>]/g, "_")}.txt`;
+    folder.file(fileName, content);
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${novel.title.replace(/[/\\?%*:|"<>]/g, "_")}_chapters.zip`;
   a.click();
   URL.revokeObjectURL(url);
 }

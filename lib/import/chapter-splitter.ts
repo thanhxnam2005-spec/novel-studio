@@ -105,3 +105,33 @@ export function parseCustomRegex(input: string): RegExp | null {
     return null;
   }
 }
+
+/**
+ * Split text into chunks of fixed length.
+ */
+export function splitByLength(
+  text: string,
+  chunkSize: number,
+): ChapterCandidate[] {
+  const chapters: ChapterCandidate[] = [];
+  let currentPos = 0;
+  let index = 1;
+
+  while (currentPos < text.length) {
+    const end = Math.min(currentPos + chunkSize, text.length);
+    const content = text.slice(currentPos, end).trim();
+
+    if (content) {
+      chapters.push({
+        title: `Chương ${index}`,
+        content,
+        wordCount: countWords(content),
+      });
+      index++;
+    }
+    currentPos = end;
+  }
+
+  return chapters;
+}
+

@@ -18,6 +18,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReaderControls } from "./reader-controls";
 import { ReaderSentenceList } from "./reader-sentence-list";
 import { ReaderSettings } from "./reader-settings";
+import { DictionaryManagement } from "../dictionary-management";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookIcon, ListMusicIcon } from "lucide-react";
 
 function PanelResizeHandle() {
   const isDragging = useRef(false);
@@ -157,13 +160,34 @@ export function ReaderPanel() {
         <ReaderSettings />
       </div>
 
-      {/* Sentence list (middle, scrollable) */}
-      <ReaderSentenceList />
+      {/* Tabs for Reading (TTS) and Dictionary */}
+      <Tabs defaultValue="read" className="flex min-h-0 flex-1 flex-col">
+        <div className="px-4 pt-2">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="read" className="gap-2">
+              <ListMusicIcon className="size-3.5" />
+              Đọc
+            </TabsTrigger>
+            <TabsTrigger value="dict" className="gap-2">
+              <BookIcon className="size-3.5" />
+              Từ điển
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      {/* Controls (bottom, pinned) */}
-      <div className="shrink-0 border-t bg-background px-4 py-3">
-        <ReaderControls />
-      </div>
+        <TabsContent value="read" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ReaderSentenceList />
+          <div className="shrink-0 border-t bg-background px-4 py-3">
+            <ReaderControls />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="dict" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <DictionaryManagement compact />
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 

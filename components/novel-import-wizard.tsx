@@ -19,6 +19,7 @@ import {
   CHAPTER_PRESETS,
   parseCustomRegex,
   splitChapters,
+  splitByLength,
   testPattern,
   type ChapterCandidate,
 } from "@/lib/import";
@@ -79,6 +80,8 @@ export function NovelImportWizard() {
   const [selectedPreset, setSelectedPreset] = useState<string>("vietnamese");
   const [customRegex, setCustomRegex] = useState("");
   const [useCustom, setUseCustom] = useState(false);
+  const [splitMode, setSplitMode] = useState<"regex" | "length">("regex");
+  const [chunkSize, setChunkSize] = useState(9000);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [chapters, setChapters] = useState<ChapterCandidate[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -170,6 +173,13 @@ export function NovelImportWizard() {
   }, [getActivePattern]);
 
   const handleSplit = useCallback(() => {
+    if (splitMode === "length") {
+      const result = splitByLength(fullTextRef.current, chunkSize);
+      setChapters(result);
+      setStep("preview");
+      return;
+    }
+
     const pattern = getActivePattern();
     if (!pattern) {
       toast.error("Biểu thức regex không hợp lệ");
@@ -178,7 +188,7 @@ export function NovelImportWizard() {
     const result = splitChapters(fullTextRef.current, pattern);
     setChapters(result);
     setStep("preview");
-  }, [getActivePattern]);
+  }, [getActivePattern, splitMode, chunkSize]);
 
   // ── Chapter Editing ─────────────────────────────────────
 
@@ -420,68 +430,119 @@ export function NovelImportWizard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Mẫu có sẵn</Label>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {Object.entries(CHAPTER_PRESETS).map(([key, preset]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setSelectedPreset(key);
-                      setUseCustom(false);
-                      setMatchCount(null);
-                    }}
-                    className={`rounded-lg border p-3 text-left text-sm transition-colors ${
-                      !useCustom && selectedPreset === key
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    }`}
-                  >
-                    <span className="font-medium">{preset.label}</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {preset.pattern.source}
-                    </span>
-                  </button>
-                ))}
+            <div className="space-y-4">
+              <Label>Phương thức tách</Label>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setSplitMode("regex")}
+                  className={`flex-1 rounded-lg border p-3 text-left transition-colors ${
+                    splitMode === "regex" ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <p className="text-sm font-bold">Theo chương (Regex)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Dùng mẫu để tìm tên chương</p>
+                </button>
+                <button
+                  onClick={() => setSplitMode("length")}
+                  className={`flex-1 rounded-lg border p-3 text-left transition-colors ${
+                    splitMode === "length" ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <p className="text-sm font-bold">Theo ký tự</p>
+                  <p className="text-xs text-muted-foreground mt-1">Chia nhỏ văn bản thành các phần bằng nhau</p>
+                </button>
               </div>
             </div>
 
             <Separator />
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="use-custom"
-                  checked={useCustom}
-                  onChange={(e) => {
-                    setUseCustom(e.target.checked);
-                    setMatchCount(null);
-                  }}
-                  className="size-4 rounded border-border"
-                />
-                <Label htmlFor="use-custom">Sử dụng regex tùy chỉnh</Label>
-              </div>
-              {useCustom && (
-                <Input
-                  placeholder="e.g. /^Phần \d+/gm or ^VOLUME \d+"
-                  value={customRegex}
-                  onChange={(e) => {
-                    setCustomRegex(e.target.value);
-                    setMatchCount(null);
-                  }}
-                />
-              )}
-            </div>
+            {splitMode === "regex" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Mẫu có sẵn</Label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {Object.entries(CHAPTER_PRESETS).map(([key, preset]) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSelectedPreset(key);
+                          setUseCustom(false);
+                          setMatchCount(null);
+                        }}
+                        className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                          !useCustom && selectedPreset === key
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="font-medium">{preset.label}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {preset.pattern.source}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={handleTest}>
-                Kiểm tra mẫu
-              </Button>
-              {matchCount !== null && (
-                <Badge variant="secondary">Tìm thấy {matchCount} kết quả</Badge>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="use-custom"
+                      checked={useCustom}
+                      onChange={(e) => {
+                        setUseCustom(e.target.checked);
+                        setMatchCount(null);
+                      }}
+                      className="size-4 rounded border-border"
+                    />
+                    <Label htmlFor="use-custom">Sử dụng regex tùy chỉnh</Label>
+                  </div>
+                  {useCustom && (
+                    <Input
+                      placeholder="e.g. /^Phần \d+/gm or ^VOLUME \d+"
+                      value={customRegex}
+                      onChange={(e) => {
+                        setCustomRegex(e.target.value);
+                        setMatchCount(null);
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={handleTest}>
+                    Kiểm tra mẫu
+                  </Button>
+                  {matchCount !== null && (
+                    <Badge variant="secondary">Tìm thấy {matchCount} kết quả</Badge>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="chunk-size">Số lượng ký tự mỗi chương</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="chunk-size"
+                      type="number"
+                      value={chunkSize}
+                      onChange={(e) => setChunkSize(parseInt(e.target.value) || 9000)}
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">ký tự / chương</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Gợi ý: 9,000 ký tự là kích thước tối ưu cho việc dịch STV.
+                  </p>
+                </div>
+                
+                <Badge variant="secondary" className="py-1">
+                  Dự kiến: {Math.ceil(fullTextRef.current.length / chunkSize)} chương
+                </Badge>
+              </div>
+            )}
 
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep("input")}>

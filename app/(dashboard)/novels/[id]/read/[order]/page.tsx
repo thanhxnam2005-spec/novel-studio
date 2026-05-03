@@ -51,7 +51,7 @@ function ChapterContent({
   }
 
   return (
-    <div className="prose prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
+    <div className="prose prose-stone max-w-none dark:prose-invert whitespace-pre-wrap leading-relaxed md:leading-loose text-lg md:text-xl font-serif tracking-wide px-2 md:px-4">
       {text}
     </div>
   );

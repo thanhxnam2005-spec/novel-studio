@@ -1,10 +1,10 @@
 "use client";
 
 import { AnalysisDialog } from "@/components/analysis-dialog";
-import { BulkTranslateDialog } from "@/components/bulk-translate-dialog";
 import { EditNovelDialog } from "@/components/edit-novel-dialog";
-import { BulkConvertDialog } from "@/components/novel/bulk-convert-dialog";
+import { BulkSTVDialog } from "@/components/novel/bulk-stv-dialog";
 import { BulkReplaceDialog } from "@/components/novel/bulk-replace-dialog";
+import { BulkResplitDialog } from "@/components/novel/bulk-resplit-dialog";
 import { ChaptersTab } from "@/components/novel/chapters-tab";
 import { CharactersTab } from "@/components/novel/characters-tab";
 import { EditableText } from "@/components/novel/editable-text";
@@ -37,7 +37,7 @@ import {
   useNovel,
   useNovelScenes,
 } from "@/lib/hooks";
-import { downloadNovelJson, exportNovel } from "@/lib/novel-io";
+import { downloadNovelJson, downloadNovelChaptersZip, exportNovel } from "@/lib/novel-io";
 import {
   DownloadIcon,
   ExternalLinkIcon,
@@ -47,6 +47,7 @@ import {
   SparklesIcon,
   Trash2Icon,
   UsersIcon,
+  FileArchiveIcon,
 } from "lucide-react";
 import {
   useParams,
@@ -82,6 +83,8 @@ export default function NovelDetailPage() {
   const [replaceChapterIds, setReplaceChapterIds] = useState<string[]>([]);
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertChapterIds, setConvertChapterIds] = useState<string[]>([]);
+  const [resplitOpen, setResplitOpen] = useState(false);
+  const [resplitChapterIds, setResplitChapterIds] = useState<string[]>([]);
 
   // Word counts
   const chapterWordCounts = useMemo(() => {
@@ -119,6 +122,11 @@ export default function NovelDetailPage() {
     setConvertOpen(true);
   };
 
+  const handleResplit = (chapterIds: string[]) => {
+    setResplitChapterIds(chapterIds);
+    setResplitOpen(true);
+  };
+
   const handleExport = async () => {
     if (!novel) return;
     try {
@@ -127,6 +135,16 @@ export default function NovelDetailPage() {
       toast.success(`Đã xuất "${novel.title}"`);
     } catch {
       toast.error("Xuất tiểu thuyết thất bại");
+    }
+  };
+
+  const handleExportZip = async () => {
+    if (!novel) return;
+    try {
+      await downloadNovelChaptersZip(novel.id);
+      toast.success(`Đã xuất ZIP "${novel.title}"`);
+    } catch {
+      toast.error("Xuất ZIP thất bại");
     }
   };
 
@@ -260,11 +278,19 @@ export default function NovelDetailPage() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleExportZip}>
+                    <FileArchiveIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Xuất ZIP (TXT)</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={handleExport}>
                     <DownloadIcon className="size-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Xuất file</TooltipContent>
+                <TooltipContent>Xuất JSON</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -389,16 +415,37 @@ export default function NovelDetailPage() {
             onTranslate={handleTranslate}
             onReplace={handleReplace}
             onConvert={handleConvert}
+            onResplit={handleResplit}
           />
         </TabsContent>
       </Tabs>
 
-      {/* Bulk translate dialog */}
-      <BulkTranslateDialog
+      {/* Bulk STV translate dialog */}
+      <BulkSTVDialog
         open={translateOpen}
         onOpenChange={setTranslateOpen}
         novelId={id}
-        selectedChapterIds={translateChapterIds}
+        chapterIds={translateChapterIds}
+        chapters={chapters ?? []}
+        mode="translate"
+      />
+
+      {/* Bulk STV convert dialog */}
+      <BulkSTVDialog
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+        novelId={id}
+        chapterIds={convertChapterIds}
+        chapters={chapters ?? []}
+        mode="convert"
+      />
+
+      {/* Bulk resplit dialog */}
+      <BulkResplitDialog
+        open={resplitOpen}
+        onOpenChange={setResplitOpen}
+        novelId={id}
+        chapterIds={resplitChapterIds}
         chapters={chapters ?? []}
       />
 
@@ -408,15 +455,6 @@ export default function NovelDetailPage() {
         onOpenChange={setReplaceOpen}
         novelId={id}
         chapterIds={replaceChapterIds}
-        chapters={chapters ?? []}
-      />
-
-      {/* Bulk convert dialog */}
-      <BulkConvertDialog
-        open={convertOpen}
-        onOpenChange={setConvertOpen}
-        novelId={id}
-        chapterIds={convertChapterIds}
         chapters={chapters ?? []}
       />
 

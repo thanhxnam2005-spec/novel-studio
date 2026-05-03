@@ -112,43 +112,94 @@ export interface STVTranslateProgress {
 }
 
 /**
+ * Tiền xử lý: Thay thế các từ Trung Quốc bằng nghĩa Việt trong từ điển trước khi dịch.
+ * Điều này ép STV phải sử dụng nghĩa mà người dùng mong muốn.
+ */
+export function applyDictionaryPreTranslate(
+  text: string,
+  dict: Array<{ chinese: string; vietnamese: string }>,
+): string {
+  if (!text || dict.length === 0) return text;
+
+  // Sắp xếp từ dài nhất lên trước để tránh thay thế nhầm
+  const sortedDict = [...dict].sort((a, b) => b.chinese.length - a.chinese.length);
+  
+  let result = text;
+  for (const entry of sortedDict) {
+    if (!entry.chinese || !entry.vietnamese) continue;
+    // Sử dụng regex để thay thế tất cả các cụm từ Trung Quốc tương ứng
+    // Chúng ta không dùng bọc dấu vì STV có thể bị rối, 
+    // STV thường giữ nguyên các từ đã là Tiếng Việt.
+    const regex = new RegExp(entry.chinese, "g");
+    result = result.replace(regex, entry.vietnamese);
+  }
+  return result;
+}
+
+/**
  * Dịch toàn bộ văn bản tiếng Trung sang tiếng Việt qua STV API.
- *
- * - Tự động chia nhỏ nếu text > 10.000 ký tự.
- * - Rate limit: 10.000 ký tự / 2 giây.
- * - `onProgress` callback để cập nhật UI real-time.
- * - `signal` để hỗ trợ hủy (AbortController).
+ * Bảo toàn cấu trúc xuống dòng bằng cách xử lý theo từng đoạn văn.
  */
 export async function stvTranslate(
   text: string,
   options?: {
     onProgress?: (progress: STVTranslateProgress) => void;
     signal?: AbortSignal;
+    dictionary?: Array<{ chinese: string; vietnamese: string }>;
   },
 ): Promise<string> {
   if (!text || !text.trim()) return "";
 
-  const chunks = splitIntoChunks(text, RATE_LIMIT_CHARS);
-  const results: string[] = [];
+  // 1. Áp dụng từ điển trước khi gửi đi (Tiền xử lý)
+  let processedText = text;
+  if (options?.dictionary && options.dictionary.length > 0) {
+    processedText = applyDictionaryPreTranslate(text, options.dictionary);
+  }
 
-  for (let i = 0; i < chunks.length; i++) {
-    // Kiểm tra abort
+  const lines = processedText.split("\n");
+  const results: string[] = [];
+  
+  const batches: string[][] = [];
+  let currentBatch: string[] = [];
+  let currentBatchLen = 0;
+
+  for (const line of lines) {
+    if (line.length > RATE_LIMIT_CHARS) {
+      if (currentBatch.length > 0) batches.push(currentBatch);
+      batches.push([line]);
+      currentBatch = [];
+      currentBatchLen = 0;
+      continue;
+    }
+
+    if (currentBatchLen + line.length + 1 > 8000) {
+      batches.push(currentBatch);
+      currentBatch = [line];
+      currentBatchLen = line.length;
+    } else {
+      currentBatch.push(line);
+      currentBatchLen += line.length + 1;
+    }
+  }
+  if (currentBatch.length > 0) batches.push(currentBatch);
+
+  for (let i = 0; i < batches.length; i++) {
     if (options?.signal?.aborted) {
       throw new DOMException("Aborted", "AbortError");
     }
 
-    const translated = await translateChunk(chunks[i]);
+    const batchText = batches[i].join("\n");
+    const translated = await translateChunk(batchText);
     results.push(translated);
 
-    // Callback progress
     options?.onProgress?.({
       currentChunk: i,
-      totalChunks: chunks.length,
-      partialResult: results.join(""),
+      totalChunks: batches.length,
+      partialResult: results.join("\n"),
     });
   }
 
-  return results.join("");
+  return results.join("\n");
 }
 
 /**

@@ -44,6 +44,7 @@ import {
   PencilIcon,
   PlusIcon,
   ReplaceAllIcon,
+  ScissorsIcon,
   SearchIcon,
   TrashIcon,
   WrenchIcon,
@@ -105,6 +106,7 @@ export function ChaptersTab({
   onTranslate,
   onReplace,
   onConvert,
+  onResplit,
 }: {
   novelId: string;
   chapters: Chapter[];
@@ -119,6 +121,7 @@ export function ChaptersTab({
   onTranslate: (chapterIds: string[]) => void;
   onReplace?: (chapterIds: string[]) => void;
   onConvert?: (chapterIds: string[]) => void;
+  onResplit?: (chapterIds: string[]) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -249,6 +252,7 @@ export function ChaptersTab({
                 <SearchIcon className="size-3.5" />
                 Phân tích đã chọn
               </button>
+
               <button
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                 onClick={() => onTranslate(Array.from(selected))}
@@ -272,6 +276,15 @@ export function ChaptersTab({
                 >
                   <GitCompareArrowsIcon className="size-3.5" />
                   Convert đã chọn
+                </button>
+              )}
+              {onResplit && (
+                <button
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted text-primary"
+                  onClick={() => onResplit(Array.from(selected))}
+                >
+                  <ScissorsIcon className="size-3.5" />
+                  Gộp & Tách lại
                 </button>
               )}
             </PopoverContent>
