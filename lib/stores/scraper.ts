@@ -284,7 +284,7 @@ export const useScraperStore = create<ScraperState>()(
         }
       },
 
-      startBackgroundScraping: async (mode, novelId, title, desc) => {
+      startBackgroundScraping: async (mode: "new" | "existing", novelId?: string, title?: string, desc?: string) => {
         let { novelInfo, selectedChapterUrls, adapter, url } = get();
         if (!novelInfo) return;
 
