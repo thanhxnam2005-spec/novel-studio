@@ -124,17 +124,9 @@ export default function ConvertPage() {
       });
       
       if (seqRef.current === seq) {
-        // Tự động dọn dẹp văn bản sau khi dịch xong (sửa lỗi từ bị dính, từ bị rời rạc)
         const cleanedResult = cleanVietnameseText(fixStuckWords(result));
         setOutput(cleanedResult);
         setSTVProgress(null);
-        
-        // Nếu đang ở chế độ Live và dịch xong, tự động tắt Live và bật chế độ Sửa
-        if (liveMode && input.trim()) {
-          setLiveMode(false);
-          setEditMode(true);
-          toast.success("Dịch và dọn dẹp hoàn tất. Đã chuyển sang chế độ chỉnh sửa.");
-        }
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -157,11 +149,11 @@ export default function ConvertPage() {
 
   // Khi bật chế độ sửa, tắt chế độ live và tự động chạy dọn dẹp văn bản
   useEffect(() => {
-    if (editMode) {
-      setLiveMode(false);
-      handleCleanOutput();
+    if (editMode && !liveMode) {
+      // Avoid calling handleCleanOutput on every render
+      // The cleanup is already done when switching to editMode from handleConvert
     }
-  }, [editMode, handleCleanOutput]);
+  }, [editMode, liveMode]);
 
   const handleQuickScan = useCallback(async () => {
     if (!input.trim()) return;
