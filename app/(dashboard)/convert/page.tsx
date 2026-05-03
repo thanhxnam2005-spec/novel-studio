@@ -61,6 +61,7 @@ import { sify } from "chinese-conv";
 import { useTrainingStore } from "@/lib/stores/training-store";
 import { useBackgroundTraining } from "@/lib/hooks/use-background-training";
 import { toast } from "sonner";
+import { stvTranslate } from "@/lib/api/stv-translator";
 
 function splitTextIntoChunks(text: string, maxChunkSize: number = 30000): string[] {
   const chunks: string[] = [];
@@ -112,6 +113,8 @@ export default function ConvertPage() {
   const [copied, setCopied] = useState(false);
   const [liveMode, setLiveMode] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [useSTVMode, setUseSTVMode] = useState(true);
+  const [stvProgress, setSTVProgress] = useState<string | null>(null);
   const [detectedNames, setDetectedNames] = useState<DictPair[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
@@ -121,6 +124,7 @@ export default function ConvertPage() {
   const [showDetectedNames, setShowDetectedNames] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const stvAbortRef = useRef<AbortController | null>(null);
 
   const providers = useAIProviders();
   const activeProvider = providers?.find(p => p.isActive);
@@ -145,68 +149,35 @@ export default function ConvertPage() {
     if (!input.trim()) return;
     const seq = ++seqRef.current;
     setIsConverting(true);
+    setSTVProgress(null);
+    
+    // Cancel previous STV request if any
+    stvAbortRef.current?.abort();
     
     try {
-      const chunks = splitTextIntoChunks(input, 30000);
-      let finalPlainText = "";
-      let finalSegments: ConvertSegment[] = [];
-      let finalDetectedNames: DictPair[] = [];
-
-      for (let i = 0; i < chunks.length; i++) {
-        if (seqRef.current !== seq) return;
+      if (useSTVMode) {
+        // ── STV Server Mode ──
+        const controller = new AbortController();
+        stvAbortRef.current = controller;
         
-        const result = await convertText(chunks[i], { globalNames, options: mergedOptions });
-        
-        finalPlainText += result.plainText;
-        finalSegments = finalSegments.concat(result.segments);
-        
-        const newNames = result.detectedNames ?? [];
-        for (const n of newNames) {
-          if (!finalDetectedNames.some(d => d.chinese === n.chinese)) {
-            finalDetectedNames.push(n);
-          }
-        }
+        const result = await stvTranslate(input, {
+          signal: controller.signal,
+          onProgress: (p) => {
+            if (seqRef.current !== seq) return;
+            setOutput(p.partialResult);
+            setSTVProgress(`Đang dịch: ${p.currentChunk + 1}/${p.totalChunks} phần`);
+          },
+        });
         
         if (seqRef.current === seq) {
-          setOutput(finalPlainText);
-          setSegments(finalSegments);
-          setDetectedNames([...finalDetectedNames]);
+          setOutput(result);
+          setSegments([]);
+          setDetectedNames([]);
+          setSTVProgress(null);
         }
-      }
-    } catch (err) {
-      if (seqRef.current === seq) {
-        toast.error("Lỗi convert: " + (err instanceof Error ? err.message : String(err)));
-      }
-    } finally {
-      if (seqRef.current === seq) setIsConverting(false);
-    }
-  }, [input, mergedOptions, globalNames]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      setInput(sify(text));
-      setLastProcessedIndex(0);
-      toast.success(`Đã nhập ${file.name}`);
-    };
-    reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  useEffect(() => {
-    if (!liveMode || !engineReady) return;
-    if (!debouncedInput.trim()) {
-      setOutput("");
-      return;
-    }
-    const seq = ++seqRef.current;
-    setIsConverting(true);
-    const processChunks = async () => {
-      try {
-        const chunks = splitTextIntoChunks(debouncedInput, 30000);
+      } else {
+        // ── QT Dictionary Mode ──
+        const chunks = splitTextIntoChunks(input, 30000);
         let finalPlainText = "";
         let finalSegments: ConvertSegment[] = [];
         let finalDetectedNames: DictPair[] = [];
@@ -232,17 +203,115 @@ export default function ConvertPage() {
             setDetectedNames([...finalDetectedNames]);
           }
         }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (seqRef.current === seq) {
+        toast.error("Lỗi convert: " + (err instanceof Error ? err.message : String(err)));
+      }
+    } finally {
+      if (seqRef.current === seq) {
+        setIsConverting(false);
+        setSTVProgress(null);
+      }
+    }
+  }, [input, mergedOptions, globalNames, useSTVMode]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setInput(sify(text));
+      setLastProcessedIndex(0);
+      toast.success(`Đã nhập ${file.name}`);
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  useEffect(() => {
+    if (!liveMode) return;
+    // QT mode cần engine ready, STV mode luôn sẵn sàng
+    if (!useSTVMode && !engineReady) return;
+    if (!debouncedInput.trim()) {
+      setOutput("");
+      return;
+    }
+    const seq = ++seqRef.current;
+    setIsConverting(true);
+    setSTVProgress(null);
+    
+    // Cancel previous STV request
+    stvAbortRef.current?.abort();
+    
+    const processChunks = async () => {
+      try {
+        if (useSTVMode) {
+          // ── STV Server Mode ──
+          const controller = new AbortController();
+          stvAbortRef.current = controller;
+          
+          const result = await stvTranslate(debouncedInput, {
+            signal: controller.signal,
+            onProgress: (p) => {
+              if (seqRef.current !== seq) return;
+              setOutput(p.partialResult);
+              setSTVProgress(`Đang dịch: ${p.currentChunk + 1}/${p.totalChunks} phần`);
+            },
+          });
+          
+          if (seqRef.current === seq) {
+            setOutput(result);
+            setSegments([]);
+            setDetectedNames([]);
+            setSTVProgress(null);
+          }
+        } else {
+          // ── QT Dictionary Mode ──
+          const chunks = splitTextIntoChunks(debouncedInput, 30000);
+          let finalPlainText = "";
+          let finalSegments: ConvertSegment[] = [];
+          let finalDetectedNames: DictPair[] = [];
+
+          for (let i = 0; i < chunks.length; i++) {
+            if (seqRef.current !== seq) return;
+            
+            const result = await convertText(chunks[i], { globalNames, options: mergedOptions });
+            
+            finalPlainText += result.plainText;
+            finalSegments = finalSegments.concat(result.segments);
+            
+            const newNames = result.detectedNames ?? [];
+            for (const n of newNames) {
+              if (!finalDetectedNames.some(d => d.chinese === n.chinese)) {
+                finalDetectedNames.push(n);
+              }
+            }
+            
+            if (seqRef.current === seq) {
+              setOutput(finalPlainText);
+              setSegments(finalSegments);
+              setDetectedNames([...finalDetectedNames]);
+            }
+          }
+        }
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         if (seqRef.current === seq) {
           toast.error("Lỗi convert: " + (err instanceof Error ? err.message : String(err)));
         }
       } finally {
-        if (seqRef.current === seq) setIsConverting(false);
+        if (seqRef.current === seq) {
+          setIsConverting(false);
+          setSTVProgress(null);
+        }
       }
     };
 
     processChunks();
-  }, [liveMode, debouncedInput, mergedOptions, engineReady, globalNames]);
+  }, [liveMode, debouncedInput, mergedOptions, engineReady, globalNames, useSTVMode]);
 
   const handleRead = useCallback(() => {
     if (!output.trim()) return;
@@ -325,9 +394,16 @@ export default function ConvertPage() {
         <div>
           <h1 className="font-serif text-2xl font-bold">Convert nhanh</h1>
           <p className="text-sm text-muted-foreground">
-            Dán văn bản tiếng Trung và convert sang tiếng Việt bằng từ điển QT.
-            Không cần API key.
+            {useSTVMode
+              ? "Dịch tiếng Trung qua server STV (SangTacViet). Không cần từ điển."
+              : "Dán văn bản tiếng Trung và convert sang tiếng Việt bằng từ điển QT."}
           </p>
+          {stvProgress && (
+            <p className="text-xs text-primary mt-1 flex items-center gap-1.5">
+              <LoaderIcon className="size-3 animate-spin" />
+              {stvProgress}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -360,12 +436,37 @@ export default function ConvertPage() {
 
           {(input || output) && <div className="h-5 w-px bg-border" />}
 
+          <div className="flex items-center gap-1.5 rounded-full border p-0.5 bg-muted/50">
+            <button
+              onClick={() => setUseSTVMode(true)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                useSTVMode
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              STV Server
+            </button>
+            <button
+              onClick={() => setUseSTVMode(false)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                !useSTVMode
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              QT Từ điển
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             <Switch
               id="live-mode"
               checked={liveMode}
               onCheckedChange={setLiveMode}
-              disabled={!engineReady}
+              disabled={!useSTVMode && !engineReady}
             />
             <Label htmlFor="live-mode" className="text-sm">
               Live
@@ -616,14 +717,16 @@ export default function ConvertPage() {
           <Button
             size="lg"
             onClick={handleConvert}
-            disabled={isConverting || !input.trim() || !engineReady}
+            disabled={isConverting || !input.trim() || (!useSTVMode && !engineReady)}
           >
             <ArrowRightLeftIcon className="mr-2 size-4" />
             {isConverting
-              ? "Đang convert..."
-              : !engineReady
+              ? (useSTVMode ? "Đang dịch qua STV..." : "Đang convert...")
+              : (!useSTVMode && !engineReady)
                 ? "Đang tải từ điển..."
-                : "Convert"}
+                : useSTVMode
+                  ? "Dịch qua STV"
+                  : "Convert"}
           </Button>
         </div>
       )}

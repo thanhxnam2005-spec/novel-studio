@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Novel Studio - Tampermonkey Bridge
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Cầu nối (Bridge) giúp Novel Studio tải truyện trực tiếp qua Tampermonkey trên Android (Kiwi Browser).
 // @author       You
 // @match        http://localhost:3000/*
@@ -19,11 +19,13 @@
     console.log("[Novel Studio Bridge] Initialized on", window.location.href);
 
     // Báo cho app biết Tampermonkey đã sẵn sàng
-    window.postMessage({ type: 'TAMPERMONKEY_BRIDGE_READY', version: '2.0' }, '*');
+    window.postMessage({ type: 'TAMPERMONKEY_BRIDGE_READY', version: '2.1' }, '*');
 
     window.addEventListener('message', function(event) {
-        // Chỉ nhận tin nhắn từ chính trang web
-        if (event.source !== window) return;
+        // Trong môi trường sandbox của Tampermonkey, window có thể là wrapper
+        // nên việc so sánh event.source !== window có thể bị sai.
+        // Ta dùng event.origin để kiểm tra thay thế.
+        if (event.origin !== window.location.origin) return;
 
         const data = event.data;
         if (!data || data.source !== 'novel-studio-app') return;
@@ -35,7 +37,7 @@
             window.postMessage({
                 source: 'novel-studio-bridge',
                 id: id,
-                response: { ok: true, version: '2.0 (Tampermonkey)' }
+                response: { ok: true, version: '2.1 (Tampermonkey)' }
             }, '*');
             return;
         }
