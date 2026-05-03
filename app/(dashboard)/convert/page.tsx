@@ -126,6 +126,14 @@ export default function ConvertPage() {
       if (seqRef.current === seq) {
         setOutput(result);
         setSTVProgress(null);
+        
+        // Nếu đang ở chế độ Live và dịch xong, tự động tắt Live và bật chế độ Sửa
+        // để người dùng có thể chỉnh sửa văn bản mà không sợ bị dịch lại đè lên
+        if (liveMode && input.trim()) {
+          setLiveMode(false);
+          setEditMode(true);
+          toast.success("Dịch hoàn tất. Đã chuyển sang chế độ chỉnh sửa.");
+        }
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -138,13 +146,20 @@ export default function ConvertPage() {
         setSTVProgress(null);
       }
     }
-  }, [input, setOutput]);
+  }, [input, setOutput, liveMode]); // Add liveMode to dependencies to access it inside
 
   useEffect(() => {
-    if (liveMode) {
+    if (liveMode && !editMode) {
       handleConvert();
     }
-  }, [debouncedInput, liveMode, handleConvert]);
+  }, [debouncedInput, liveMode, editMode, handleConvert]);
+
+  // Khi bật chế độ sửa, tắt chế độ live để tránh bị ghi đè khi sửa văn bản
+  useEffect(() => {
+    if (editMode) {
+      setLiveMode(false);
+    }
+  }, [editMode]);
 
   const handleQuickScan = useCallback(async () => {
     if (!input.trim()) return;
