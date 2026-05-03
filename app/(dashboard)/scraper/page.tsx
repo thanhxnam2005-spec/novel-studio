@@ -369,8 +369,7 @@ export default function ScraperPage() {
 
   useEffect(() => {
     store.checkExtension();
-    return () => store.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Do NOT reset on unmount to allow switching tabs/pages while scraping
   }, []);
 
   return (
