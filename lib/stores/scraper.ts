@@ -7,6 +7,8 @@ import {
 } from "../scraper/engine";
 import { extensionFetch, checkExtensionStatus, extensionDownloadSTVChapter } from "../scraper/extension-bridge";
 import { novelIndexDebugSummary } from "../scraper/novel-page-diagnostics";
+import { db } from "../db";
+import { stripHtml, countWords } from "../utils";
 import type {
   ChapterContent,
   NovelInfo,
@@ -37,6 +39,9 @@ interface ScraperState {
   retryingIndex: number | null;
   debugLogs: DebugLog[];
   chapterDelay: number;
+  isPaused: boolean;
+  isBackground: boolean;
+  targetNovelId: string | null;
 
   // Actions
   setUrl: (url: string) => void;
@@ -47,9 +52,12 @@ interface ScraperState {
   selectAll: () => void;
   deselectAll: () => void;
   startScraping: () => Promise<void>;
+  startBackgroundScraping: (mode: "new" | "existing", novelId?: string, title?: string, desc?: string) => Promise<void>;
   confirmSTVReady: () => Promise<void>;
   retryScrapeChapter: (index: number) => Promise<void>;
   abortScraping: () => void;
+  pauseScraping: () => void;
+  resumeScraping: () => void;
   setStep: (step: ScraperStep) => void;
   setChapterDelay: (delay: number) => void;
   reset: () => void;
@@ -72,6 +80,9 @@ const initialState = {
   retryingIndex: null as number | null,
   debugLogs: [] as DebugLog[],
   chapterDelay: 2,
+  isPaused: false,
+  isBackground: false,
+  targetNovelId: null as string | null,
 };
 
 function addLog(label: string, data: unknown) {
@@ -263,6 +274,126 @@ export const useScraperStore = create<ScraperState>()(
         }
       },
 
+      startBackgroundScraping: async (mode, novelId, title, desc) => {
+        const { novelInfo, selectedChapterUrls, adapter, url } = get();
+        if (!novelInfo || !adapter) return;
+
+        const selectedChapters = novelInfo.chapters.filter((ch) =>
+          selectedChapterUrls.has(ch.url),
+        );
+        if (selectedChapters.length === 0) return;
+
+        let finalNovelId = novelId;
+        const now = new Date();
+
+        // 1. Prepare Novel
+        if (mode === "new") {
+          finalNovelId = crypto.randomUUID();
+          await db.novels.add({
+            id: finalNovelId,
+            title: (title || novelInfo.title || "Untitled").trim(),
+            description: (desc || novelInfo.description || "").trim(),
+            sourceUrl: url,
+            author: novelInfo.author,
+            coverImage: novelInfo.coverImage,
+            createdAt: now,
+            updatedAt: now,
+          });
+        } else if (novelId) {
+          // Update existing novel with sourceUrl if not set
+          await db.novels.update(novelId, {
+            sourceUrl: url,
+            updatedAt: now,
+            ...(novelInfo.coverImage ? { coverImage: novelInfo.coverImage } : {}),
+          });
+        } else {
+          return; // No novel selected
+        }
+
+        const abortController = new AbortController();
+        set({
+          isBackground: true,
+          isPaused: false,
+          targetNovelId: finalNovelId!,
+          step: "scraping",
+          isLoading: true,
+          error: null,
+          scrapedChapters: [],
+          progress: { completed: 0, total: selectedChapters.length, current: "" },
+          abortController,
+        });
+
+        // 2. Start Scraping + Immediate Save
+        try {
+          await scrapeChapters(
+            selectedChapters,
+            adapter,
+            (completed, total, currentTitle) => {
+              set({ progress: { completed, total, current: currentTitle } });
+            },
+            abortController.signal,
+            async (entry) => {
+              const { targetNovelId } = get();
+              if (targetNovelId) {
+                // Save immediately
+                const chapterId = crypto.randomUUID();
+                const plainText = stripHtml(entry.parsed.content);
+                const currentOrder = await db.chapters
+                  .where("novelId")
+                  .equals(targetNovelId)
+                  .count();
+
+                await db.chapters.add({
+                  id: chapterId,
+                  novelId: targetNovelId,
+                  title: entry.parsed.title,
+                  order: currentOrder,
+                  createdAt: now,
+                  updatedAt: now,
+                });
+
+                await db.scenes.add({
+                  id: crypto.randomUUID(),
+                  chapterId,
+                  novelId: targetNovelId,
+                  title: entry.parsed.title,
+                  content: entry.parsed.content,
+                  order: 0,
+                  wordCount: countWords(plainText),
+                  version: 0,
+                  versionType: "manual",
+                  isActive: 1,
+                  createdAt: now,
+                  updatedAt: now,
+                });
+              }
+
+              const prev = get().scrapedChapters;
+              set({ scrapedChapters: [...prev, entry.parsed] });
+              logChapterIssue(entry);
+            },
+            get().chapterDelay * 1000,
+            () => get().isPaused
+          );
+
+          set({
+            isLoading: false,
+            step: "preview",
+            abortController: null,
+          });
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            set({ isLoading: false, error: "Đã hủy scraping", abortController: null });
+            return;
+          }
+          set({
+            error: err instanceof Error ? err.message : "Lỗi khi scrape",
+            isLoading: false,
+            abortController: null,
+          });
+        }
+      },
+
       confirmSTVReady: async () => {
         const { novelInfo, selectedChapterUrls, adapter } = get();
         if (!novelInfo || !adapter) return;
@@ -393,7 +524,12 @@ export const useScraperStore = create<ScraperState>()(
 
       abortScraping: () => {
         get().abortController?.abort();
+        set({ isBackground: false, targetNovelId: null, isPaused: false });
       },
+
+      pauseScraping: () => set({ isPaused: true }),
+
+      resumeScraping: () => set({ isPaused: false }),
 
       setStep: (step) => set({ step }),
 
@@ -434,4 +570,3 @@ export const useScraperStore = create<ScraperState>()(
     }
   )
 );
-

@@ -71,6 +71,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PasswordGate } from "@/components/password-gate";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -787,19 +798,131 @@ function SelectStep() {
                 className="h-8 w-16 text-center text-xs"
               />
             </div>
-            <Button
-              onClick={startScraping}
-              disabled={selectedChapterUrls.size === 0}
-            >
-              Scrape {selectedChapterUrls.size} chương
-              <ArrowRightIcon className="ml-1 size-3.5" />
-            </Button>
+            <div className="flex gap-2">
+              <BackgroundScrapeDialog />
+              <Button
+                onClick={startScraping}
+                disabled={selectedChapterUrls.size === 0}
+              >
+                Scrape {selectedChapterUrls.size} chương
+                <ArrowRightIcon className="ml-1 size-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+function BackgroundScrapeDialog() {
+  const { novelInfo, selectedChapterUrls, startBackgroundScraping } = useScraperStore();
+  const novels = useNovels();
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"new" | "existing">("new");
+  const [selectedNovelId, setSelectedNovelId] = useState<string>("");
+  const [title, setTitle] = useState(novelInfo?.title || "");
+  const [desc, setDesc] = useState(novelInfo?.description || "");
+
+  const handleStart = async () => {
+    if (mode === "new" && !title.trim()) {
+      toast.error("Vui lòng nhập tiêu đề");
+      return;
+    }
+    if (mode === "existing" && !selectedNovelId) {
+      toast.error("Vui lòng chọn truyện");
+      return;
+    }
+    
+    await startBackgroundScraping(mode, selectedNovelId, title, desc);
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" disabled={selectedChapterUrls.size === 0}>
+          <DownloadIcon className="mr-1.5 size-3.5" />
+          Tải nền
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Thiết lập tải nền</DialogTitle>
+          <DialogDescription>
+            Truyện sẽ được tải và lưu trực tiếp vào danh sách. Bạn có thể đọc ngay khi chương mới được tải về.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="flex rounded-lg bg-muted p-1">
+            <button
+              onClick={() => setMode("new")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                mode === "new"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <PlusIcon className="size-3.5" />
+              Tạo mới
+            </button>
+            <button
+              onClick={() => setMode("existing")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                mode === "existing"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BookPlusIcon className="size-3.5" />
+              Thêm vào có sẵn
+            </button>
+          </div>
+
+          {mode === "new" ? (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Tiêu đề</Label>
+                <Input value={title} onChange={e => setTitle(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Mô tả</Label>
+                <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label className="text-xs">Chọn truyện</Label>
+              <Select value={selectedNovelId} onValueChange={setSelectedNovelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn truyện mục tiêu..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {novels?.map(n => (
+                    <SelectItem key={n.id} value={n.id}>{n.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <p>• {selectedChapterUrls.size} chương sẽ được tải.</p>
+            <p>• Mỗi chương tải xong sẽ lưu vào DB ngay lập tức.</p>
+            <p>• Có thể tạm dừng/tiếp tục từ thanh thông báo ở góc màn hình.</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Hủy</Button>
+          <Button onClick={handleStart}>Bắt đầu tải nền</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 // ─── Step 2.5: STV Wait ─────────────────────────────────────
 

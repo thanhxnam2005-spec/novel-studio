@@ -34,6 +34,7 @@ import {
 import { PageContextSync } from "@/components/chat/page-context-sync";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ScraperOverlay } from "@/components/scraper/scraper-overlay";
 
 const pageTitles: Record<string, string> = Object.fromEntries(
   [...navConfig, ...miscNav].map((item) => [item.href, item.title]),
@@ -177,6 +178,7 @@ export default function DashboardLayout({
       <DictInitializer />
       <GlobalSearchDialog />
       <WelcomeModal />
+      <ScraperOverlay />
     </SidebarProvider>
   );
 }
