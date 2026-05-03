@@ -80,25 +80,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, countWords, stripHtml } from "@/lib/utils";
 
 
-// ─── Helpers ───────────────────────────────────────────────
-
-function countWords(text: string): number {
-  const cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
-  const latin = text
-    .replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  return (cjk?.length ?? 0) + latin.length;
-}
-
-function stripHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  return doc.body.textContent ?? "";
-}
 
 const REQUIRED_EXTENSION_VERSION: string =
   // eslint-disable-next-line @typescript-eslint/no-require-imports

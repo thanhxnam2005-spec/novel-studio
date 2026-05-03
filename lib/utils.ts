@@ -6,11 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function countWords(text: string): number {
-  return text
+  const cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
+  const latin = text
+    .replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, "")
     .trim()
     .split(/\s+/)
-    .filter((w) => w.length > 0).length;
+    .filter(Boolean);
+  return (cjk?.length ?? 0) + latin.length;
 }
+
+export function stripHtml(html: string): string {
+  if (typeof window === "undefined") return html.replace(/<[^>]+>/g, "");
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent ?? "";
+}
+
 
 /** Convert basic markdown to HTML (bold, italic, links, inline code) */
 export function markdownToHtml(md: string): string {
