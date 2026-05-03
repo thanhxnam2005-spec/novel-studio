@@ -163,7 +163,7 @@ export async function extensionFetch(
 export async function extensionDownloadSTVChapter(
   chapterId: string | number,
   chapterUrl: string,
-): Promise<{ success: boolean; rawHtml?: string; content?: string; data?: string; json?: any; error?: string }> {
+): Promise<{ success: boolean; rawHtml?: string; content?: string; data?: string; title?: string; json?: any; error?: string }> {
   const response: any = await sendMessage({
     action: "downloadChapter",
     payload: { chapterId, chapterUrl },

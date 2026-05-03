@@ -46,12 +46,14 @@ export async function scrapeChapters(
     let timedOut = false;
     let logs: string[] = [];
 
+    let extTitle: string | undefined = undefined;
     if (adapter.name === "STV" && chapter.id) {
       try {
         const res = await extensionDownloadSTVChapter(chapter.id, chapter.url);
         html = res.data ?? "";
         contentText = (res as any).contentText ?? res.content ?? undefined;
         timedOut = (res as any).timedOut ?? false;
+        extTitle = res.title;
       } catch (err: any) {
         timedOut = true; // Mark as issue if it fails
         logs.push(err.message);
@@ -70,6 +72,12 @@ export async function scrapeChapters(
     const content = sanitizeChapterContent(
       adapter.getChapterContent(html, chapter.url, contentText),
     );
+
+    // Fallback to title from index page or extension result if extracted title is empty
+    if (!content.title || content.title.trim() === "") {
+      content.title = extTitle || chapter.title;
+    }
+
     if (timedOut) {
       content.warning = `Timeout — nội dung chưa load được (${content.content.length} ký tự)`;
     } else if (content.content.length < 1000) {
